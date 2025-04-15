@@ -1,14 +1,14 @@
-English | [中文README](README.zh_CN.md)
+[English](README.md) | 中文README
 
-## Overview
+## 关于HiAgent-SDK
 
-HiAgent-SDK is the SDK of the HiAgent product from Volcano Engine. Developers can use this SDK to quickly develop functions and improve development efficiency. HiAgent-SDK provides a complete AI native application development suite, including a rich set of development components and application example code.
+HiAgent-SDK是火山引擎的HiAgent产品的SDK，开发者可使用该SDK，快捷的开发功能，提升开发效率。HiAgent-SDK提供了完整的AI原生应用开发套件，包括丰富的开发组件和应用示例代码。
 
-## Architecture
+## 架构
 
 ![img.png](img.png)
 
-## Quick Start
+## 快速开始
 ```python
 from hiagent_core.langchain_integrations import LangChainTool
 ocr_tool = LangChainTool.from_tool(OCRTool(...))
@@ -44,29 +44,13 @@ agent_executor = AgentExecutor.from_agent_and_tools(
 )
 # Run the agent with a test query
 response = agent_executor.invoke(
-    {"input": "Recognize the text in the picture. The picture url is http://example.com/example.png"}
+    {"input": "识别图片中的文字，图片地址是 http://example.com/example.png"}
 )
 
 # Print the response from the agent
 print("response:", response)
-
 ```
-
-
-
-
-
-## Code of Conduct
-
-Please check [Code of Conduct](CODE_OF_CONDUCT.md) for more details.
-
-## Security
-
-If you discover a potential security issue in this project, or think you may
-have discovered a security issue, we ask that you notify Bytedance Security via our [security center](https://security.bytedance.com/src) or [vulnerability reporting email](sec@bytedance.com).
-
-Please do **not** create a public GitHub issue.
 
 ## License
 
-This project is licensed under the [Apache-2.0 License](LICENSE).
+该项目采用 [Apache-2.0 License](LICENSE) 许可。
