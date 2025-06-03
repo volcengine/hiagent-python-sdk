@@ -1,6 +1,6 @@
-[English](README.md) | 中文README
+# 关于 HiAgent-SDK
 
-## 关于HiAgent-SDK
+[English](README.md) | 中文README
 
 HiAgent-SDK是火山引擎的HiAgent产品的SDK，开发者可使用该SDK，快捷的开发功能，提升开发效率。HiAgent-SDK提供了完整的AI原生应用开发套件，包括丰富的开发组件和应用示例代码。
 
@@ -9,6 +9,7 @@ HiAgent-SDK是火山引擎的HiAgent产品的SDK，开发者可使用该SDK，�
 ![img.png](img.png)
 
 ## 快速开始
+
 ```python
 from hiagent_core.langchain_integrations import LangChainTool
 ocr_tool = LangChainTool.from_tool(OCRTool(...))

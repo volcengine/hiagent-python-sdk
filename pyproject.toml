@@ -1,0 +1,16 @@
+[project]
+name = "hiagent-sdk"
+version = "0.1.0"
+description = "HiAgent API"
+license = { text = "apache-2.0" }
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "opentelemetry-api>=1.33.1",
+    "opentelemetry-exporter-otlp-proto-http>=1.33.1",
+    "opentelemetry-sdk>=1.33.1",
+    "pydantic>=2.11.5",
+    "python-dotenv>=1.1.0",
+    "requests>=2.32.3",
+    "volcengine>=1.0.187",
+]

@@ -1,0 +1,78 @@
+# coding:utf-8
+import json
+import threading
+
+from urllib.parse import urlparse
+
+from volcengine.ApiInfo import ApiInfo
+from volcengine.Credentials import Credentials
+from volcengine.ServiceInfo import ServiceInfo
+from volcengine.base.Service import Service
+
+from libs.api import observe_types
+
+
+class ObserveService(Service):
+    _instance_lock = threading.Lock()
+
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(ObserveService, '_instance'):
+            with ObserveService._instance_lock:
+                if not hasattr(ObserveService, '_instance'):
+                    ObserveService._instance = object.__new__(cls)
+        return ObserveService._instance
+
+    def __init__(self, endpoint='https://open.volcengineapi.com', region='cn-north-1'):
+        self.service_info = ObserveService.get_service_info(endpoint, region)
+        self.api_info = ObserveService.get_api_info()
+        super(ObserveService, self).__init__(self.service_info, self.api_info)
+
+    @staticmethod
+    def get_service_info(endpoint, region):
+        parsed = urlparse(endpoint)
+        scheme, hostname = parsed.scheme, parsed.hostname + \
+            ":" + str(parsed.port)
+        if not scheme or not hostname:
+            raise Exception(f'invalid endpoint format: {endpoint}')
+        service_info = ServiceInfo(hostname, {'Accept': 'application/json'},
+                                   Credentials('', '', 'observe', region), 5, 5, scheme=scheme)
+        return service_info
+
+    @staticmethod
+    def get_api_info():
+        api_info = {
+            'CreateApiToken':
+                ApiInfo(
+                    'POST', '/', {'Action': 'CreateApiToken', 'Version': '2025-05-01'}, {}, {}),
+        }
+        return api_info
+
+    def CreateApiToken(self, params: observe_types.CreateApiTokenRequest) -> observe_types.CreateApiTokenResponse:
+        """ 创建 api token
+
+        Args:
+            params (Dict):
+
+                `WorkspaceID (str)`: 必选, 工作空间 ID
+                    示例值: wcxxxxxxxxxxxxxxxxxxx
+
+        Returns:
+            Dict:
+
+                `Token (str)`: token
+                    示例值: wcxxxxxxxxxxxxxxxxxxx
+
+                `ExpiresIn (int)`: 有效时间，单位为秒
+                    示例值: 3600
+
+        """
+        return self.__request('CreateApiToken', params)
+
+    def __request(self, action, params):
+        res = self.json(action, dict(), json.dumps(params))
+        if res == '':
+            raise Exception('empty response')
+        res_json = json.loads(res)
+        if 'Result' not in res_json.keys():
+            return res_json
+        return res_json['Result']
