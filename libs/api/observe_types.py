@@ -3,23 +3,25 @@ from pydantic import BaseModel, Field
 
 
 class CreateApiTokenRequest(BaseModel):
-    """工作空间 ID"""
     WorkspaceID: str = Field(
         title="工作空间 ID",
         description="工作空间 ID",
         example="wcxxxxxxxxxxxxxxxxxxx"
     )
+    CustomAppID: str = Field(
+        title="自定义应用 ID",
+        description="自定义应用 ID",
+        example="appxxxxxxxxxxxxxxxxxxx"
+    )
 
 
 class CreateApiTokenResponse(BaseModel):
-    """API Token 响应"""
     Token: str = Field(
         title="API Token",
         description="API Token",
         example="wcxxxxxxxxxxxxxxxxxxx"
     )
-    """有效时间"""
-    ExpitesIn: int = Field(
+    ExpiresIn: int = Field(
         title="有效时间",
         description="有效时间，单位为秒",
         example=3600

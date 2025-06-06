@@ -56,6 +56,9 @@ class ObserveService(Service):
                 `WorkspaceID (str)`: 必选, 工作空间 ID
                     示例值: wcxxxxxxxxxxxxxxxxxxx
 
+                `CustomAppID (str)`: 必选, 自定义应用 ID
+                    示例值: appxxxxxxxxxxxxxxxxxxx
+
         Returns:
             Dict:
 
@@ -66,7 +69,9 @@ class ObserveService(Service):
                     示例值: 3600
 
         """
-        return self.__request('CreateApiToken', params)
+        return observe_types.CreateApiTokenResponse.model_validate(
+            self.__request('CreateApiToken', params.model_dump())
+        )
 
     def __request(self, action, params):
         res = self.json(action, dict(), json.dumps(params))
