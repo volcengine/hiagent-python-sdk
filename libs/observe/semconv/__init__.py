@@ -56,7 +56,7 @@ class SemanticConvention:
 
     WORKSPACE_ID: str = "workspace_id"
     """
-    WORKSPACE_ID 是工作区的保留字，是工作区的唯一标识符，如果设置，将会在 collector 中被覆盖为当前自定义工作区的 ID
+    WORKSPACE_ID 是工作区的保留字，是 HiAgent 平台内工作区的唯一标识符，如果设置，将会在 collector 中被覆盖为当前自定义应用所在工作区的 ID
     """
 
     USER_ID: str = "user_id"
@@ -104,27 +104,27 @@ class SemanticConvention:
     Workflow ID 如果在有工作流中的工作流 ID
     """
 
-    TOP_P: float = 0
+    TOP_P: str = "top_p"
     """
     TOP_P 是模型生成的概率阈值
     """
 
-    TEMPERATURE: float = 0
+    TEMPERATURE: str = "temperature"
     """
     TEMPERATURE 是模型生成的温度阈值
     """
 
-    TOP_K: float = 0
+    TOP_K: str = "top_k"
     """
     TOP_K 是知识库的召回数量阈值
     """
 
-    STREAM: bool = False
+    STREAM: str = "stream"
     """
     STREAM 是否是流式返回
     """
 
-    SPAN_TYPE: SpanType = SpanType.START
+    SPAN_TYPE: str = "span_type"
     """
     SPAN_TYPE 是 span 的类型，用于在页面上拆分不同的展示类型
     """
@@ -134,12 +134,12 @@ class SemanticConvention:
     Request ID 是请求的唯一标识符
     """
 
-    LANTENCY: int = 0
+    LATENCY: str = "latency"
     """
-    LANTENCY 是请求的延迟时间，毫秒为单位
+    LATENCY 是请求的延迟时间，毫秒为单位
     """
 
-    LATENCT_FIRST_RESP = "latencyFirstResp"
+    LATENCT_FIRST_RESP: str = "latencyFirstResp"
     """
     LATENCT_FIRST_RESP 是首 token 的延迟时间，毫秒为单位
     """

@@ -4,6 +4,7 @@ from functools import wraps
 from typing import Dict
 
 from opentelemetry import trace
+from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode
 
 from libs.observe.semconv import SemanticConvention
@@ -68,77 +69,28 @@ def tracable(wrapped):
 
 
 class TracedSpan:
-    """
-    A wrapper class for an OpenTelemetry span that provides helper methods
-    for setting result and metadata attributes on the span.
-
-    Attributes:
-        _span (Span): The underlying OpenTelemetry span.
-    """
-
     def __init__(self, span: Span):
-        """
-        Initializes the TracedSpan with the given span.
-
-        Params:
-            span (Span): The OpenTelemetry span to be wrapped.
-        """
-
         self._span: Span = span
 
-    def set_result(self, result):
-        """
-        Sets the result attribute on the underlying span.
-
-        Params:
-            result: The result to be set as an attribute on the span.
-        """
-
-        self._span.set_attribute(SemanticConvention.GEN_AI_CONTENT_COMPLETION, result)
-
-    def set_metadata(self, metadata: Dict):
-        """
-        Sets multiple attributes on the underlying span.
-
-        Params:
-            metadata (Dict): A dictionary of attributes to be set on the span.
-        """
-
-        self._span.set_attributes(attributes=metadata)
-
     def __enter__(self):
-        """
-        Enters the context of the TracedSpan, returning itself.
-
-        Returns:
-            TracedSpan: The instance of TracedSpan.
-        """
-
         return self
 
-    def __exit__(self, _exc_type, _exc_val, _exc_tb):
-        """
-        Exits the context of the TracedSpan by ending the underlying span.
-        """
+    def set_attribute(self, key: str, value: str):
+        self._span.set_attribute(key, value)
 
+    def set_attributes(self, attributes: Dict):
+        for key, value in attributes.items():
+            self.set_attribute(key, value)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
         self._span.end()
 
 
 @contextmanager
-def start_trace(name: str):
-    """
-    A context manager that starts a new trace and provides a TracedSpan
-    for usage within the context.
-
-    Params:
-        name (str): The name of the span.
-
-    Yields:
-        TracedSpan: The wrapped span for trace operations.
-    """
-
-    __trace = trace.get_tracer_provider()
-    with __trace.get_tracer(__name__).start_as_current_span(
+def start_trace(name: str, provider: TracerProvider):
+    if provider is None:
+        provider = trace.get_tracer_provider()
+    with provider.get_tracer(__name__).start_as_current_span(
         name,
         kind=SpanKind.CLIENT,
     ) as span:

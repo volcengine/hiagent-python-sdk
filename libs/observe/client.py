@@ -1,3 +1,4 @@
+import logging
 import time
 
 import requests
@@ -15,6 +16,8 @@ from libs.api import observe_types
 from libs.api.observe import ObserveService
 
 from . import VERSION
+
+logger = logging.getLogger(__name__)
 
 
 class AuthSession(requests.Session):
@@ -46,7 +49,7 @@ class AuthSession(requests.Session):
 
     def refresh_token_if_needed(self):
         if not self.token or self.is_token_expired():
-            print("token expired or not set, refreshing...")
+            logger.debug("token expired or not set, refreshing...")
             self.get_token()
 
     def request(self, method, url, headers=None, **kwargs):
@@ -54,6 +57,8 @@ class AuthSession(requests.Session):
 
         headers = headers or {}
         headers["Authorization"] = f"Bearer {self.token}"
+
+        logger.debug(f"requesting {url} to export trace data")
 
         response = super().request(method, url, headers=headers, **kwargs)
 
@@ -77,9 +82,10 @@ def init(
     auth_session = AuthSession(top_endpoint, ak, sk, workspace_id, app_id)
 
     try:
-        auth_session.get_token()
+        token = auth_session.get_token()
+        logger.debug(f"got initial token: {token}")
     except Exception as e:
-        raise RuntimeError(f"Failed to get initial token: {e}")
+        raise RuntimeError(f"failed to get initial token: {e}")
 
     exporter = OTLPSpanExporter(
         endpoint=f"{trace_endpoint}/v1/traces", session=auth_session
@@ -105,3 +111,5 @@ def init(
             ]
         )
     )
+
+    return provider
