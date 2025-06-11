@@ -1,23 +1,31 @@
 [project]
-name = "hiagent-sdk"
+name = "hiagent-sdk-monorepo"
 version = "0.1.0"
-description = "HiAgent API"
+description = "HiAgent SDK monorepo"
 license = { text = "apache-2.0" }
 readme = "README.md"
-requires-python = ">=3.11"
-dependencies = [
-    "opentelemetry-api>=1.33.1",
-    "opentelemetry-exporter-otlp-proto-http>=1.33.1",
-    "opentelemetry-sdk>=1.33.1",
-    "pydantic>=2.11.5",
-    "python-dotenv>=1.1.0",
-    "requests>=2.32.3",
-    "volcengine>=1.0.187",
-]
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.uv.sources]
+hiagent-api = { workspace = true }
+hiagent-components = { workspace = true }
+hiagent-eva = { workspace = true }
+hiagent-observe = { workspace = true }
+
+[tool.uv.workspace]
+members = ["libs/api", "libs/components", "libs/eva", "libs/observe"]
 
 [dependency-groups]
 dev = [
-    "chainlit>=2.2.1",
     "langchain>=0.3.25",
+    "pytest>=8.4.0",
+    "hiagent-components",
+    "hiagent-api",
+    "hiagent-eva",
+    "hiagent-observe",
+    "mcp>=1.9.4",
+    "langchain-core>=0.3.0",
+    "chainlit>=2.2.1",
     "langchain-ollama>=0.3.3",
 ]
