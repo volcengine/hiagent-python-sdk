@@ -82,3 +82,9 @@ wrapt==1.17.2
 wsproto==1.2.0
 zipp==3.22.0
 zstandard==0.23.0
+aiofiles==24.1.0
+httpx>=0.28.1
+httpx-sse>=0.4.0
+langchain-core>=0.3.0
+mcp>=1.9.4
+json-schema-to-pydantic>=0.2.6

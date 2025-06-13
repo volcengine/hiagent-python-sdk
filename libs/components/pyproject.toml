@@ -1,0 +1,32 @@
+[project]
+name = "hiagent-components"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "json-schema-to-pydantic>=0.2.6",
+    "strenum>=0.4.15",
+    "pydantic>=2.11.5",
+    "python-dotenv>=1.1.0",
+    "hiagent-api>=0.1.0,<0.2.0"
+]
+
+[dependency-groups]
+integrations = [
+    "mcp>=1.9.4",
+    "langchain-core>=0.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "tests/",
+    "examples/",
+]

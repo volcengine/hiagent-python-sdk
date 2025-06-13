@@ -1,0 +1,552 @@
+# coding: utf-8
+import json
+import logging
+import os
+import time
+from collections import OrderedDict
+from typing import AsyncGenerator, Generator, Optional, Union
+
+import aiofiles
+import httpx
+from requests.auth import AuthBase
+
+try:
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib import urlencode
+
+try:
+    import configparser as configparser
+except ImportError:
+    import ConfigParser as configparser
+
+from httpx_sse import ServerSentEvent, aconnect_sse, connect_sse
+from pydantic import BaseModel, ConfigDict
+from volcengine.ApiInfo import ApiInfo
+from volcengine.auth.SignerV4 import SignerV4
+from volcengine.base.Request import Request
+from volcengine.base.Service import Service
+from volcengine.Policy import ComplexEncoder, InnerToken, SecurityToken2
+from volcengine.ServiceInfo import ServiceInfo
+from volcengine.util.Util import *
+
+VERSION = "0.0.1"
+
+
+class VolcAuth(AuthBase):
+    def __init__(self, client, request):
+        # setup any auth-related data here
+        self.client = client
+        self.request = request
+
+    def __call__(self, r):
+        self.request.body = r.body
+        if "Content-Type" in r.headers:
+            self.request.headers["Content-Type"] = r.headers["Content-Type"]
+        if "Content-Length" in r.headers:
+            self.request.headers["Content-Length"] = r.headers["Content-Length"]
+        SignerV4.sign(self.request, self.client.service_info.credentials)
+        for k in self.request.headers:
+            v = self.request.headers[k]
+            r.headers[k] = v
+        return r.headers
+
+
+class Service(object):
+    def __init__(
+        self,
+        service_info: ServiceInfo,
+        api_info: dict[str, ApiInfo],
+        http_client: Optional[httpx.Client] = None,
+        async_http_client: Optional[httpx.AsyncClient] = None,
+    ):
+        self.service_info = service_info
+        self.api_info = api_info
+        self.init()
+        self.init_http_client(http_client, async_http_client)
+
+    def init_http_client(
+        self,
+        http_client: Optional[httpx.Client] = None,
+        async_http_client: Optional[httpx.AsyncClient] = None,
+    ):
+        if http_client:
+            self.http_client = http_client
+        else:
+            self.http_client = httpx.Client(
+                timeout=httpx.Timeout(
+                    timeout=self.service_info.socket_timeout,
+                    connect=self.service_info.connection_timeout,
+                    read=self.service_info.socket_timeout,
+                )
+            )
+
+        if async_http_client:
+            self.async_http_client = async_http_client
+        else:
+            self.async_http_client = httpx.AsyncClient(
+                timeout=httpx.Timeout(
+                    timeout=self.service_info.socket_timeout,
+                    connect=self.service_info.connection_timeout,
+                    read=self.service_info.socket_timeout,
+                )
+            )
+
+    def init(self):
+        if "VOLC_ACCESSKEY" in os.environ and "VOLC_SECRETKEY" in os.environ:
+            self.service_info.credentials.set_ak(os.environ["VOLC_ACCESSKEY"])
+            self.service_info.credentials.set_sk(os.environ["VOLC_SECRETKEY"])
+        else:
+            if os.environ.get("HOME", None) is None:
+                return
+            # 先尝试从credentials中读取ak、sk，credentials不存在则从config中读取
+            path_ini = os.environ["HOME"] + "/.volc/credentials"
+            path_json = os.environ["HOME"] + "/.volc/config"
+            if os.path.isfile(path_ini):
+                conf = configparser.ConfigParser()
+                conf.read(path_ini)
+                default_section, ak_option, sk_option = (
+                    "default",
+                    "access_key_id",
+                    "secret_access_key",
+                )
+                if conf.has_section(default_section):
+                    if conf.has_option(default_section, ak_option):
+                        ak = conf.get(default_section, ak_option)
+                        self.service_info.credentials.set_ak(ak)
+                    if conf.has_option(default_section, sk_option):
+                        sk = conf.get(default_section, sk_option)
+                        self.service_info.credentials.set_sk(sk)
+            elif os.path.isfile(path_json):
+                with open(path_json, "r") as f:
+                    try:
+                        j = json.load(f)
+                    except Exception:
+                        logging.warning("%s is not json file", path_json)
+                        return
+                    if "ak" in j:
+                        self.service_info.credentials.set_ak(j["ak"])
+                    if "sk" in j:
+                        self.service_info.credentials.set_sk(j["sk"])
+
+    def set_ak(self, ak):
+        self.service_info.credentials.set_ak(ak)
+
+    def set_sk(self, sk):
+        self.service_info.credentials.set_sk(sk)
+
+    def set_session_token(self, session_token):
+        self.service_info.credentials.set_session_token(session_token)
+
+    def set_host(self, host):
+        self.service_info.host = host
+
+    def set_scheme(self, scheme):
+        self.service_info.scheme = scheme
+
+    def set_connection_timeout(self, connection_timeout):
+        self.service_info.connection_timeout = connection_timeout
+
+    def set_socket_timeout(self, socket_timeout):
+        self.service_info.socket_timeout = socket_timeout
+
+    def get_sign_url(self, api, params):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+
+        mquery = self.merge(api_info.query, params)
+        r = Request()
+        r.set_shema(self.service_info.scheme)
+        r.set_method(api_info.method)
+        r.set_path(api_info.path)
+        r.set_query(mquery)
+
+        return SignerV4.sign_url(r, self.service_info.credentials)
+
+    def get(self, api, params, doseq=0):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+
+        r = self.prepare_request(api_info, params, doseq)
+
+        SignerV4.sign(r, self.service_info.credentials)
+
+        url = r.build(doseq)
+        with httpx.Client() as client:
+            resp = client.get(
+                url,
+                headers=r.headers,
+                timeout=(
+                    self.service_info.connection_timeout,
+                    self.service_info.socket_timeout,
+                ),
+            )
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            raise Exception(resp.text)
+
+    def _prepare_post_signed_request(self, api, params, form) -> Union[str, Request]:
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+        r = self.prepare_request(api_info, params)
+        r.headers["Content-Type"] = "application/x-www-form-urlencoded"
+        r.form = self.merge(api_info.form, form)
+        r.body = urlencode(r.form, True)
+        SignerV4.sign(r, self.service_info.credentials)
+
+        url = r.build()
+        return (url, r)
+
+    def post(self, api, params, form) -> str:
+        url, r = self._prepare_post_signed_request(api, params, form)
+        resp = self.http_client.post(url, headers=r.headers, data=r.form)
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            raise Exception(resp.text)
+
+    async def apost(self, api, params, form) -> str:
+        url, r = self._prepare_post_signed_request(api, params, form)
+        resp = await self.async_http_client.post(url, headers=r.headers, data=r.form)
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            raise Exception(resp.text)
+
+    def request(self, api, params, data, files=None, reqConfig=None):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+
+        r = self.prepare_request(api_info, params)
+        if reqConfig is not None:
+            reqConfig(r)
+        url = r.build()
+
+        resp = self.http_client.request(
+            api_info.method, url, data=data, files=files, auth=VolcAuth(self, r)
+        )
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            raise Exception(resp.text)
+
+    async def arequest(self, api, params, data, files=None, reqConfig=None):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+
+        r = self.prepare_request(api_info, params)
+        if reqConfig is not None:
+            reqConfig(r)
+        url = r.build()
+
+        resp = self.async_http_client.request(
+            api_info.method, url, data=data, files=files, auth=VolcAuth(self, r)
+        )
+        if resp.status_code == 200:
+            return resp.text
+        else:
+            raise Exception(resp.text)
+
+    def json(self, api, params, body):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+        r = self.prepare_request(api_info, params)
+        r.headers["Content-Type"] = "application/json"
+        r.body = body
+
+        SignerV4.sign(r, self.service_info.credentials)
+
+        url = r.build()
+        resp = self.http_client.post(url, headers=r.headers, data=r.body)
+        if resp.status_code == 200:
+            return json.dumps(resp.json())
+        else:
+            raise Exception(resp.text.encode("utf-8"))
+
+    async def ajson(self, api, params, body):
+        if api not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[api]
+        r = self.prepare_request(api_info, params)
+        r.headers["Content-Type"] = "application/json"
+        r.body = body
+
+        SignerV4.sign(r, self.service_info.credentials)
+
+        url = r.build()
+        resp = await self.async_http_client.post(url, headers=r.headers, data=r.body)
+        if resp.status_code == 200:
+            return json.dumps(resp.json())
+        else:
+            raise Exception(resp.text.encode("utf-8"))
+
+    def put(self, url, file_path, headers):
+        with open(file_path, "rb") as f:
+            resp = self.http_client.put(url, headers=headers, data=f)
+            headers["X-Tt-Logid"] = resp.headers.get("X-Tt-Logid", "")
+            if resp.status_code == 200:
+                return True, resp.text.encode("utf-8")
+            else:
+                return False, resp.text.encode("utf-8")
+
+    async def aput(self, url, file_path, headers):
+        async with aiofiles.open(file_path, "rb") as f:
+            content = await f.read()
+            resp = await self.async_http_client.put(
+                url, headers=headers, content=content
+            )
+            # It's generally not a good practice to modify the input `headers` dictionary directly.
+            # Consider returning the logid separately or as part of a structured response.
+            # For now, I will keep the existing behavior of modifying the headers dictionary.
+            headers["X-Tt-Logid"] = resp.headers.get("X-Tt-Logid", "")
+            if resp.status_code == 200:
+                return True, resp.text.encode("utf-8")
+            else:
+                return False, resp.text.encode("utf-8")
+
+    def put_data(self, url, data, headers):
+        resp = self.http_client.put(url, headers=headers, data=data)
+        headers["X-Tt-Logid"] = resp.headers.get("X-Tt-Logid", "")
+        if resp.status_code == 200:
+            return True, resp.text.encode("utf-8")
+        else:
+            return False, resp.text.encode("utf-8")
+
+    async def aput_data(self, url, data, headers):
+        resp = self.async_http_client.put(url, headers=headers, data=data)
+        headers["X-Tt-Logid"] = resp.headers.get("X-Tt-Logid", "")
+        if resp.status_code == 200:
+            return True, resp.text.encode("utf-8")
+        else:
+            return False, resp.text.encode("utf-8")
+
+    def _request(self, action, params):
+        res = self.json(action, dict(), json.dumps(params))
+        if res == "":
+            raise Exception("empty response")
+        res_json = json.loads(res)
+        if "Result" not in res_json.keys():
+            return res_json
+        return res_json["Result"]
+
+    async def _arequest(self, action, params):
+        res = await self.ajson(action, dict(), json.dumps(params))
+        if res == "":
+            raise Exception("empty response")
+        res_json = json.loads(res)
+        if "Result" not in res_json.keys():
+            return res_json
+        return res_json["Result"]
+
+    def prepare_request(self, api_info, params, doseq=0):
+        for key in params:
+            if (
+                type(params[key]) == int
+                or type(params[key]) == float
+                or type(params[key]) == bool
+            ):
+                params[key] = str(params[key])
+            elif sys.version_info[0] != 3:
+                if type(params[key]) == unicode:
+                    params[key] = params[key].encode("utf-8")
+            elif type(params[key]) == list:
+                if not doseq:
+                    params[key] = ",".join(params[key])
+
+        connection_timeout = self.service_info.connection_timeout
+        socket_timeout = self.service_info.socket_timeout
+
+        r = Request()
+        r.set_shema(self.service_info.scheme)
+        r.set_method(api_info.method)
+        r.set_connection_timeout(connection_timeout)
+        r.set_socket_timeout(socket_timeout)
+
+        mheaders = self.merge(api_info.header, self.service_info.header)
+        mheaders["Host"] = self.service_info.host
+        mheaders["User-Agent"] = "hiagent-python-sdk" + VERSION
+        r.set_headers(mheaders)
+
+        mquery = self.merge(api_info.query, params)
+        r.set_query(mquery)
+
+        r.set_host(self.service_info.host)
+        r.set_path(api_info.path)
+
+        return r
+
+    def merge(self, param1, param2):
+        od = OrderedDict()
+        for key in param1:
+            od[key] = param1[key]
+
+        for key in param2:
+            od[key] = param2[key]
+
+        return od
+
+    def sign_sts2(self, policy, expire):
+        sk = self.service_info.credentials.sk
+        key = hashlib.md5(sk.encode("utf-8")).digest()
+
+        sts = SecurityToken2()
+        sts.access_key_id = Util.generate_access_key_id("AKTP")
+        sts.secret_access_key = Util.generate_secret_key()
+        now = int(time.time())
+        sts.current_time = Service.to_rfc3339(now)
+
+        if expire < 60:
+            expire = 60
+        expire = now + expire
+        sts.expired_time = Service.to_rfc3339(expire)
+
+        inner_token = InnerToken()
+        inner_token.lt_access_key_id = self.service_info.credentials.ak
+        inner_token.access_key_id = sts.access_key_id
+        if policy is None:
+            inner_token.policy_string = ""
+        else:
+            inner_token.policy_string = json.dumps(
+                policy, cls=ComplexEncoder, sort_keys=True
+            ).replace(" ", "")
+        inner_token.signed_secret_access_key = Util.aes_encrypt_cbc_with_base64(
+            sts.secret_access_key, key
+        )
+        inner_token.expired_time = expire
+
+        sign_str = "{}|{}|{}|{}|{}".format(
+            inner_token.lt_access_key_id,
+            inner_token.access_key_id,
+            inner_token.expired_time,
+            inner_token.signed_secret_access_key,
+            inner_token.policy_string,
+        )
+        inner_token.signature = Util.to_hex(Util.hmac_sha256(key, sign_str))
+
+        sts.session_token = (
+            "STS2"
+            + base64.b64encode(
+                json.dumps(inner_token, cls=ComplexEncoder, sort_keys=True)
+                .replace(" ", "")
+                .encode("utf-8")
+            ).decode()
+        )
+        return sts
+
+    @staticmethod
+    def to_rfc3339(t):
+        format_time = time.strftime("%Y-%m-%dT%H:%M:%S%z", time.localtime(t))
+        pos = format_time.find("+")
+        if pos == -1:
+            pos = format_time.find("-")
+        return format_time[: pos + 3] + ":" + format_time[pos + 3 : pos + 5]
+
+
+class AppAPIMixin:
+    def __init__(
+        self,
+        http_client: httpx.Client,
+        async_http_client: httpx.AsyncClient,
+    ) -> None:
+        self.base_url = ""
+        self.http_client = http_client
+        self.async_http_client = async_http_client
+
+    def set_app_base_url(self, base_url: str):
+        self.base_url = base_url
+
+    async def _apost(self, app_key: str, action: str, params: dict) -> str:
+        if self.base_url == "":
+            raise Exception(
+                "base_url not set, you should call set_app_base_url() first"
+            )
+
+        app_url = f"{self.base_url}/{action}"
+
+        headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+
+        response = await self.async_http_client.post(
+            app_url, json=params, headers=headers
+        )
+        try:
+            response.raise_for_status()  # Raise an exception for bad status codes
+        except Exception:
+            raise Exception(response.text)
+        res_text = response.text
+        if not res_text:
+            raise Exception("empty response")
+        return res_text
+
+    def _post(self, app_key: str, action: str, params: dict) -> str:
+        if self.base_url == "":
+            raise Exception(
+                "base_url not set, you should call set_app_base_url() first"
+            )
+
+        app_url = f"{self.base_url}/{action}"
+
+        headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        response = self.http_client.post(app_url, json=params, headers=headers)
+        try:
+            response.raise_for_status()  # Raise an exception for bad status codes
+        except Exception:
+            raise Exception(response.text)
+        res_text = response.text
+        if not res_text:
+            raise Exception("empty response")
+        return res_text
+
+    def _sse_post(
+        self, app_key: str, action: str, params: dict
+    ) -> Generator[ServerSentEvent, None, None]:
+        if self.base_url == "":
+            raise Exception(
+                "base_url not set, you should call set_app_base_url() first"
+            )
+
+        app_url = f"{self.base_url}/{action}"
+
+        headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+
+        with connect_sse(
+            self.http_client,
+            method="POST",
+            url=app_url,
+            json=params,
+            headers=headers,
+        ) as event_source:
+            for sse in event_source.iter_sse():
+                yield sse
+
+    async def _asse_post(
+        self, app_key: str, action: str, params: dict
+    ) -> AsyncGenerator[ServerSentEvent, None]:
+        if self.base_url == "":
+            raise Exception(
+                "base_url not set, you should call set_app_base_url() first"
+            )
+
+        app_url = f"{self.base_url}/{action}"
+
+        headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+
+        async with aconnect_sse(
+            self.async_http_client,
+            method="POST",
+            url=app_url,
+            json=params,
+            headers=headers,
+        ) as event_source:
+            async for sse in event_source.aiter_sse():
+                yield sse
+
+
+class BaseSchema(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
