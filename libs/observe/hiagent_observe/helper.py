@@ -3,11 +3,10 @@ from contextlib import contextmanager
 from functools import wraps
 from typing import Dict
 
+from hiagent_observe.semconv import SemanticConvention
 from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.trace import Span, SpanKind, Status, StatusCode
-
-from libs.observe.semconv import SemanticConvention
 
 
 def tracable(wrapped):
@@ -77,6 +76,10 @@ class TracedSpan:
 
     def set_attribute(self, key: str, value: str):
         self._span.set_attribute(key, value)
+        self._span.set_status(Status(StatusCode.OK))
+
+    def set_status(self, status: StatusCode, description: str):
+        self._span.set_status(status=status, description=description)
 
     def set_attributes(self, attributes: Dict):
         for key, value in attributes.items():

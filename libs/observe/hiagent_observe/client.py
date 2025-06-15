@@ -3,6 +3,7 @@ import time
 
 import requests
 from hiagent_api.observe import ObserveService, observe_types
+from hiagent_observe import VERSION
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.propagate import set_global_textmap
@@ -12,7 +13,6 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
-from hiagent_observe import VERSION
 
 logger = logging.getLogger(__name__)
 

@@ -1,8 +1,4 @@
-build:
-	uv build --package hiagent-components
-	uv build --package hiagent-api
-	uv build --package hiagent-eva
-	uv build --package hiagent-observe
+build: build-component build-api build-eva build-observe
 
 build-component:
 	uv build --package hiagent-components

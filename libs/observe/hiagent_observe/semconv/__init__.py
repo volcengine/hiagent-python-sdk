@@ -2,43 +2,43 @@ from enum import Enum
 
 
 class SpanType(Enum):
-    START: str = "start"
+    START = "start"
     """
     START 表示开始调用模型或者工作流
     """
-    END: str = "end"
+    END = "end"
     """
     END 停止调用模型或者工作流
     """
-    LLM: str = "llm"
+    LLM = "llm"
     """
     LLM 大模型调用节点
     """
-    QA: str = "qa"
+    QA = "qa"
     """
     QA 代表问答库调用节点
     """
-    KNOWLEDGE: str = "knowledge"
+    KNOWLEDGE = "knowledge"
     """
     KNOWLEDGE 代表知识库调用节点
     """
-    WORKFLOW: str = "workflow"
+    WORKFLOW = "workflow"
     """
     WORKFLOW 代表工作流的调用节点
     """
-    RERANK: str = "rerank"
+    RERANK = "rerank"
     """
     RERANK 代表 rerank 模型调用节点
     """
-    EMBEDDINGS: str = "embeddings"
+    EMBEDDINGS = "embeddings"
     """
     EMBEDDINGS 代表向量化模型调用节点
     """
-    TOOL: str = "tool"
+    TOOL = "tool"
     """
     TOOL 代表工具调用节点
     """
-    TERMINLOGY: str = "terminology"
+    TERMINLOGY = "terminology"
     """
     TOOL_CALL 代表术语库调用节点
     """
@@ -139,7 +139,7 @@ class SemanticConvention:
     LATENCY 是请求的延迟时间，毫秒为单位
     """
 
-    LATENCT_FIRST_RESP: str = "latencyFirstResp"
+    LATENCT_FIRST_RESP: str = "latency_first_resp"
     """
     LATENCT_FIRST_RESP 是首 token 的延迟时间，毫秒为单位
     """
@@ -149,7 +149,7 @@ class SemanticConvention:
     INPUT 是用户输入
     """
 
-    INPUT_RAW: str = "inputRaw"
+    INPUT_RAW: str = "input_raw"
     """
     INPUT_RAW 是用户输入的原始数据
     """
@@ -159,7 +159,7 @@ class SemanticConvention:
     OUTPUT 是模型生成的结果
     """
 
-    OUTPUT_RAW: str = "outputRaw"
+    OUTPUT_RAW: str = "output_raw"
     """
     OUTPUT_RAW 是模型生成的结果的原始数据
     """
