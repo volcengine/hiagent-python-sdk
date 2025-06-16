@@ -5,14 +5,14 @@ import uuid
 
 import chainlit as cl
 from dotenv import load_dotenv
+from hiagent_observe import client, helper, semconv
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_ollama import OllamaLLM
-
-from libs.observe import client, helper, semconv
+from opentelemetry.trace import StatusCode
 
 load_dotenv()
 
@@ -42,9 +42,13 @@ def auth_callback(username: str, password: str):
         return None
 
 
+model_id = str(uuid.uuid4())
+model_name = "gemma3:1b"
+
+
 @cl.on_chat_start
 async def on_chat_start():
-    model = OllamaLLM(model="gemma3:1b")
+    model = OllamaLLM(model=model_name)
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -72,7 +76,7 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
         with helper.start_trace(name="llm_start", provider=provider) as span:
             span.set_attributes(
                 {
-                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.START,
+                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.START.value,
                 }
             )
 
@@ -84,6 +88,7 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                 span.set_attributes(
                     {
                         semconv.SemanticConvention.LATENCT_FIRST_RESP: latency,
+                        semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
                     }
                 )
 
@@ -94,11 +99,12 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
             span.set_attributes(
                 {
                     semconv.SemanticConvention.LATENCY: latency,
-                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.END,
+                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
                     semconv.SemanticConvention.OUTPUT: output,
                     semconv.SemanticConvention.OUTPUT_RAW: output,
                 }
             )
+            span.set_status(StatusCode.OK)
 
 
 @cl.on_message
@@ -115,6 +121,8 @@ async def on_message(message: cl.Message):
                 semconv.SemanticConvention.MESSAGE_ID: str(uuid.uuid4()),
                 semconv.SemanticConvention.INPUT: message.content,
                 semconv.SemanticConvention.INPUT_RAW: message.content,
+                semconv.SemanticConvention.MODEL_ID: model_id,
+                semconv.SemanticConvention.MODEL_NAME: model_name,
             }
         )
         async for chunk in runnable.astream(
@@ -131,4 +139,4 @@ async def on_message(message: cl.Message):
         await msg.send()
 
 
-# chainlit run sample_chainlit.py -w
+# chainlit run sample_chainlit.py -w -h

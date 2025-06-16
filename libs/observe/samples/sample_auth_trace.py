@@ -2,9 +2,8 @@ import os
 import time
 
 from dotenv import load_dotenv
+from hiagent_observe import client
 from opentelemetry import trace
-
-from libs.observe import client
 
 load_dotenv()
 
