@@ -1,9 +1,13 @@
+import json
 import logging
 import os
 import time
 import uuid
+from typing import Any, Optional
+from uuid import UUID
 
 import chainlit as cl
+import tiktoken
 from dotenv import load_dotenv
 from hiagent_observe import client, helper, semconv
 from langchain.prompts import ChatPromptTemplate
@@ -11,6 +15,7 @@ from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
 from langchain_ollama import OllamaLLM
 from opentelemetry.trace import StatusCode
 
@@ -30,6 +35,11 @@ try:
     )
 except Exception as e:
     raise RuntimeError(e)
+
+
+def count_tokens_openai(text: str, model: str = "gpt-3.5-turbo") -> int:
+    encoding = tiktoken.encoding_for_model(model)
+    return len(encoding.encode(text))
 
 
 @cl.password_auth_callback
@@ -69,10 +79,20 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
         super().__init__()
         self.start_time = None
         self.first_token_received = False
+        self.input = ""
+        self.latency_first_resp = None
 
-    def on_llm_start(self, *args, **kwargs):
+    def on_llm_start(
+        self,
+        serialized: dict[str, Any],
+        prompts: list[str],
+        *,
+        run_id: UUID,
+        **kwargs: Any,
+    ):
         self.start_time = time.time()
         self.first_token_received = False
+        self.input = prompts[0]
         with helper.start_trace(name="llm_start", provider=provider) as span:
             span.set_attributes(
                 {
@@ -80,31 +100,76 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                 }
             )
 
-    def on_llm_new_token(self, token: str, **kwargs):
+    def on_llm_new_token(self, token: str, *, run_id: UUID, **kwargs):
         if not self.first_token_received and self.start_time is not None:
             self.first_token_received = True
             latency = (time.time() - self.start_time) * 1000
+            self.latency_first_resp = round(latency, 1)
             with helper.start_trace(name="llm_new_token", provider=provider) as span:
                 span.set_attributes(
                     {
-                        semconv.SemanticConvention.LATENCT_FIRST_RESP: latency,
-                        semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
+                        semconv.SemanticConvention.LATENCT_FIRST_RESP: round(
+                            latency, 1
+                        ),
+                        semconv.SemanticConvention.INPUT: json.dumps(
+                            {
+                                "input": self.input,
+                            },
+                            ensure_ascii=False,
+                        ),
+                        semconv.SemanticConvention.INPUT_RAW: self.input,
                     }
                 )
 
-    def on_llm_end(self, response, *, run_id, parent_run_id=None, **kwargs):
+    def on_llm_end(
+        self,
+        response: LLMResult,
+        *,
+        run_id: UUID,
+        parent_run_id: Optional[UUID] = None,
+        **kwargs: Any,
+    ):
         output = response.generations[0][0].text
         latency = (time.time() - self.start_time) * 1000
         with helper.start_trace(name="llm_end", provider=provider) as span:
             span.set_attributes(
                 {
-                    semconv.SemanticConvention.LATENCY: latency,
+                    semconv.SemanticConvention.LATENCY: round(latency, 1),
+                    semconv.SemanticConvention.LATENCT_FIRST_RESP: self.latency_first_resp,
                     semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
-                    semconv.SemanticConvention.OUTPUT: output,
+                    semconv.SemanticConvention.INPUT: json.dumps(
+                        {
+                            "input": self.input,
+                        },
+                        ensure_ascii=False,
+                    ),
+                    semconv.SemanticConvention.INPUT_RAW: self.input,
+                    semconv.SemanticConvention.INPUT_TOKENS: count_tokens_openai(
+                        self.input
+                    ),
+                    semconv.SemanticConvention.OUTPUT: json.dumps(
+                        {
+                            "output": output,
+                        },
+                        ensure_ascii=False,
+                    ),
                     semconv.SemanticConvention.OUTPUT_RAW: output,
+                    semconv.SemanticConvention.OUTPUT_TOKENS: count_tokens_openai(
+                        output
+                    ),
+                    semconv.SemanticConvention.INPUT_TOKENS: count_tokens_openai(
+                        self.input
+                    ),
+                    semconv.SemanticConvention.OUTPUT_TOKENS: count_tokens_openai(
+                        output
+                    ),
+                    semconv.SemanticConvention.OUTPUT_PRICE: 2.3,
+                    semconv.SemanticConvention.PRICE_UNIT: 0.1,
+                    semconv.SemanticConvention.INPUT_PRICE: 34.5,
+                    semconv.SemanticConvention.CURRENCY: "USD",
                 }
             )
-            span.set_status(StatusCode.OK)
+            span.set_status(status=StatusCode.OK, description="")
 
 
 @cl.on_message

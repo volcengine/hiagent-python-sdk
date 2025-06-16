@@ -163,4 +163,5 @@ cython_debug/
 #.idea/
 
 chainlit.md
+.chainlit/
 .vscode

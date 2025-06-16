@@ -154,6 +154,21 @@ class SemanticConvention:
     INPUT_RAW 是用户输入的原始数据
     """
 
+    INPUT_TOKENS: str = "input_tokens"
+    """
+    INPUT_TOKENS 是用户输入的 token 数目
+    """
+
+    INPUT_PRICE: str = "input_price"
+    """
+    INPUT_PRICE 是用户输入的 token 价格
+    """
+
+    CURRENCY: str = "currency"
+    """
+    CURRENCY 是用户输入的货币类型，可选：RMB，USD
+    """
+
     OUTPUT: str = "output"
     """
     OUTPUT 是模型生成的结果
@@ -162,4 +177,19 @@ class SemanticConvention:
     OUTPUT_RAW: str = "output_raw"
     """
     OUTPUT_RAW 是模型生成的结果的原始数据
+    """
+
+    OUTPUT_TOKENS: str = "output_tokens"
+    """
+    OUTPUT_TOKENS 是模型生成的结果的 token 数目
+    """
+
+    OUTPUT_PRICE: str = "output_price"
+    """
+    OUTPUT_PRICE 是模型生成的结果的价格
+    """
+
+    PRICE_UNIT: str = "price_unit"
+    """
+    PRICE_UNIT 是模型生成的结果的价格单位
     """
