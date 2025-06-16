@@ -516,6 +516,7 @@ dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
     { name = "strenum" },
+    { name = "tenacity" },
 ]
 
 [package.dev-dependencies]
@@ -531,6 +532,7 @@ requires-dist = [
     { name = "pydantic", specifier = ">=2.11.5" },
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "strenum", specifier = ">=0.4.15" },
+    { name = "tenacity", specifier = ">=9.1.2" },
 ]
 
 [package.metadata.requires-dev]
