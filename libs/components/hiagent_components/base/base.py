@@ -6,12 +6,23 @@ from typing import (
     TYPE_CHECKING,
     Any,
     AsyncIterator,
+    Dict,
     Generic,
     Iterator,
     Optional,
+    Tuple,
+    Type,
     TypeVar,
     Union,
     cast,
+)
+
+from tenacity import (
+    AsyncRetrying,
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential_jitter,
 )
 
 from hiagent_components.base.utils import (
@@ -103,10 +114,11 @@ class Executable(Generic[Input, Output], ABC):
 
     def with_retry(
         self,
-        retry_if_exceptions: list[type[BaseException]] = [Exception],
+        retry_exception_types: Tuple[Type[BaseException]] = (Exception,),
         wait_exponential_jitter: bool = True,
-        stop_after_attempt: int = 3,
-    ) -> Executable[Input, Output]: ...
+        max_attempts: int = 3,
+    ) -> Executable[Input, Output]:
+        return RetryableExecutable(self, retry_exception_types, wait_exponential_jitter, max_attempts)
 
     def as_tool(
         self,
@@ -127,3 +139,67 @@ class Executable(Generic[Input, Output], ABC):
         **kwargs: Any,
     ) -> Output:
         return await run_in_executor(executor, self.invoke, input, **kwargs)
+
+class RetryableExecutable(Executable[Input, Output]):
+    def __init__(
+        self,
+        executable: Executable[Input, Output],
+        retry_exception_types: Tuple[Type[BaseException], ...] = (Exception,),
+        wait_exponential_jitter: bool = True,
+        max_attempts: int = 3,
+    ):
+        self.max_attempts = max_attempts
+        self.retry_exception_types = retry_exception_types
+        self.wait_exponential_jitter = wait_exponential_jitter
+        self.executable = executable
+
+    @property
+    def _retrying_kwargs(self) -> Dict[str, Any]:
+        kwargs: Dict[str, Any] = dict()
+
+        if self.max_attempts:
+            kwargs["stop"] = stop_after_attempt(self.max_attempts)
+
+        if self.wait_exponential_jitter:
+            kwargs["wait"] = wait_exponential_jitter()
+
+        if self.retry_exception_types:
+            kwargs["retry"] = retry_if_exception_type(self.retry_exception_types)
+
+        return kwargs
+
+    def _sync_retrying(self, **kwargs: Any) -> Retrying:
+        return Retrying(**self._retrying_kwargs, **kwargs)
+
+    def _async_retrying(self, **kwargs: Any) -> AsyncRetrying:
+        return AsyncRetrying(**self._retrying_kwargs, **kwargs)
+
+    def invoke(self, input: Input, **kwargs: Any) -> Output:
+        result = None
+        for attempt in self._sync_retrying(reraise=True):
+            with attempt:
+                result = self.executable.invoke(
+                    input,
+                    **kwargs,
+                )
+            if attempt.retry_state.outcome and not attempt.retry_state.outcome.failed:
+                attempt.retry_state.set_result(result)
+        return result
+
+    async def ainvoke(
+        self,
+        input: Input,
+        executor: Optional[Executor] = None,
+        **kwargs: Any
+    ) -> Output:
+        result = None
+        async for attempt in self._async_retrying(reraise=True):
+            with attempt:
+                result = await self.executable.ainvoke(
+                    input,
+                    executor,
+                    **kwargs,
+                )
+            if attempt.retry_state.outcome and not attempt.retry_state.outcome.failed:
+                attempt.retry_state.set_result(result)
+        return result
