@@ -9,7 +9,7 @@ from volcengine.base.Service import Service
 from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
-from . import types
+from . import eva_types
 
 
 class EvaService(Service):
@@ -28,27 +28,17 @@ class EvaService(Service):
         self,
         endpoint="https://open.volcengineapi.com",
         region="cn-north-1",
-        ak="",
-        sk="",
     ):
         if self._initialized:
             return
 
         self.endpoint = endpoint
         self.region = region
-        self.ak = ak
-        self.sk = sk
 
         # Keep consistent with observe: create service first with empty AK/SK
         self.service_info = EvaService.get_service_info(endpoint, region, "", "")
         self.api_info = EvaService.get_api_info()
         super(EvaService, self).__init__(self.service_info, self.api_info)
-
-        # Critical fix: keep consistent with observe - use set_ak/set_sk methods to set credentials
-        if ak:
-            self.set_ak(ak)
-        if sk:
-            self.set_sk(sk)
 
         self._initialized = True
 
@@ -129,8 +119,8 @@ class EvaService(Service):
         return api_info
 
     def CreateEvaTask(
-        self, params: types.CreateEvaTaskRequest
-    ) -> types.CreateEvaTaskResponse:
+        self, params: eva_types.CreateEvaTaskRequest
+    ) -> eva_types.CreateEvaTaskResponse:
         """Create evaluation task
 
         Args:
@@ -139,13 +129,13 @@ class EvaService(Service):
         Returns:
             CreateEvaTaskResponse: Created evaluation task information
         """
-        return types.CreateEvaTaskResponse.model_validate(
+        return eva_types.CreateEvaTaskResponse.model_validate(
             self.__request("CreateEvaTask", params.model_dump())
         )
 
     def ListEvaDatasetConversations(
-        self, params: types.ListEvaDatasetConversationsRequest
-    ) -> types.ListEvaDatasetConversationsResponse:
+        self, params: eva_types.ListEvaDatasetConversationsRequest
+    ) -> eva_types.ListEvaDatasetConversationsResponse:
         """Get paginated evaluation dataset conversation list
 
         Args:
@@ -154,13 +144,13 @@ class EvaService(Service):
         Returns:
             ListEvaDatasetConversationsResponse: Dataset conversation list response
         """
-        return types.ListEvaDatasetConversationsResponse.model_validate(
+        return eva_types.ListEvaDatasetConversationsResponse.model_validate(
             self.__request("ListEvaDatasetConversations", params.model_dump())
         )
 
     def ListEvaDatasetColumns(
-        self, params: types.ListEvaDatasetColumnsRequest
-    ) -> types.ListEvaDatasetColumnsResponse:
+        self, params: eva_types.ListEvaDatasetColumnsRequest
+    ) -> eva_types.ListEvaDatasetColumnsResponse:
         """Get evaluation dataset column information
 
         Args:
@@ -169,13 +159,13 @@ class EvaService(Service):
         Returns:
             ListEvaDatasetColumnsResponse: Dataset column information response
         """
-        return types.ListEvaDatasetColumnsResponse.model_validate(
+        return eva_types.ListEvaDatasetColumnsResponse.model_validate(
             self.__request("ListEvaDatasetColumns", params.model_dump())
         )
 
     def ExecEvaTaskRowGroup(
-        self, params: types.ExecEvaTaskRowGroupRequest
-    ) -> types.ExecEvaTaskRowGroupResponse:
+        self, params: eva_types.ExecEvaTaskRowGroupRequest
+    ) -> eva_types.ExecEvaTaskRowGroupResponse:
         """Submit evaluation task inference results
 
         Args:
@@ -184,13 +174,13 @@ class EvaService(Service):
         Returns:
             ExecEvaTaskRowGroupResponse: Submission result response
         """
-        return types.ExecEvaTaskRowGroupResponse.model_validate(
+        return eva_types.ExecEvaTaskRowGroupResponse.model_validate(
             self.__request("ExecEvaTaskRowGroup", params.model_dump())
         )
 
     def GetEvaTaskReport(
-        self, params: types.GetEvaTaskReportRequest
-    ) -> types.GetEvaTaskReportResponse:
+        self, params: eva_types.GetEvaTaskReportRequest
+    ) -> eva_types.GetEvaTaskReportResponse:
         """Get evaluation task report
 
         Args:
@@ -199,11 +189,13 @@ class EvaService(Service):
         Returns:
             GetEvaTaskReportResponse: Evaluation report response
         """
-        return types.GetEvaTaskReportResponse.model_validate(
+        return eva_types.GetEvaTaskReportResponse.model_validate(
             self.__request("GetEvaTaskReport", params.model_dump())
         )
 
-    def GetEvaTask(self, request: types.GetEvaTaskRequest) -> types.GetEvaTaskResponse:
+    def GetEvaTask(
+        self, request: eva_types.GetEvaTaskRequest
+    ) -> eva_types.GetEvaTaskResponse:
         """Get evaluation task details
 
         Args:
@@ -212,13 +204,13 @@ class EvaService(Service):
         Returns:
             GetEvaTaskResponse: Evaluation task details response
         """
-        return types.GetEvaTaskResponse.model_validate(
+        return eva_types.GetEvaTaskResponse.model_validate(
             self.__request("GetEvaTask", request.model_dump())
         )
 
     def CreateEvaRuleset(
-        self, params: types.CreateEvaRulesetRequest
-    ) -> types.CreateEvaRulesetResponse:
+        self, params: eva_types.CreateEvaRulesetRequest
+    ) -> eva_types.CreateEvaRulesetResponse:
         """
         Create evaluation ruleset
 
@@ -228,13 +220,13 @@ class EvaService(Service):
         Returns:
             CreateEvaRulesetResponse: Create evaluation ruleset response
         """
-        return types.CreateEvaRulesetResponse.model_validate(
+        return eva_types.CreateEvaRulesetResponse.model_validate(
             self.__request("CreateEvaRuleset", params.model_dump())
         )
 
     def ListEvaRulesets(
-        self, params: types.ListEvaRulesetsRequest
-    ) -> types.ListEvaRulesetsResponse:
+        self, params: eva_types.ListEvaRulesetsRequest
+    ) -> eva_types.ListEvaRulesetsResponse:
         """
         Get evaluation ruleset list
 
@@ -244,7 +236,7 @@ class EvaService(Service):
         Returns:
             ListEvaRulesetsResponse: Evaluation ruleset list response
         """
-        return types.ListEvaRulesetsResponse.model_validate(
+        return eva_types.ListEvaRulesetsResponse.model_validate(
             self.__request("ListEvaRulesets", params.model_dump())
         )
 

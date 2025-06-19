@@ -5,8 +5,10 @@ from typing import Callable, Dict, List, Optional
 
 from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
 
-from . import types
-from .service import EvaService
+from libs.observe.hiagent_observe.client import AuthSession
+
+from ..api.hiagent_api import eva_types
+from ..api.hiagent_api.eva import EvaService
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +41,7 @@ class Client:
 
         # Initialize Eva service
         self.eva_service = EvaService(endpoint=endpoint)
+
         self.eva_service.set_ak(ak)
         self.eva_service.set_sk(sk)
 
@@ -50,9 +53,9 @@ class Client:
         task_name: str,
         ruleset_id: str,
         description: str = "",
-        model_agent_config: Optional[types.ModelAgentConfig] = None,
+        model_agent_config: Optional[eva_types.ModelAgentConfig] = None,
         run_immediately: bool = True,
-    ) -> types.CreateEvaTaskResponse:
+    ) -> eva_types.CreateEvaTaskResponse:
         """
         Create evaluation task
 
@@ -73,7 +76,7 @@ class Client:
         # Automatically create evaluation target, using app_id as target_id
         # If ModelAgentConfig is provided, assemble it into complete EvaTargetCustomAPPConfig
         if model_agent_config:
-            target_config = types.EvaTargetCustomAPPConfig(
+            target_config = eva_types.EvaTargetCustomAPPConfig(
                 AppID=self.app_id, ModelAgentConfig=model_agent_config.model_dump()
             )
             target_config_dict = target_config.model_dump()
@@ -81,7 +84,7 @@ class Client:
             target_config_dict = {}
 
         targets = [
-            types.EvaTaskTarget(
+            eva_types.EvaTaskTarget(
                 Type="CustomAPP",
                 TargetID=self.app_id,
                 TargetName=f"App-{self.app_id}",
@@ -90,7 +93,7 @@ class Client:
             )
         ]
 
-        request = types.CreateEvaTaskRequest(
+        request = eva_types.CreateEvaTaskRequest(
             WorkspaceID=self.workspace_id,
             Name=task_name,
             Description=description,
@@ -104,7 +107,7 @@ class Client:
 
     def list_dataset_conversations(
         self, dataset_id: str, page_number: int = 1, page_size: int = 20
-    ) -> types.ListEvaDatasetConversationsResponse:
+    ) -> eva_types.ListEvaDatasetConversationsResponse:
         """
         List dataset conversations
 
@@ -119,7 +122,7 @@ class Client:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = types.ListEvaDatasetConversationsRequest(
+        request = eva_types.ListEvaDatasetConversationsRequest(
             WorkspaceID=self.workspace_id,
             DatasetID=dataset_id,
             PageNumber=page_number,
@@ -130,7 +133,7 @@ class Client:
 
     def list_dataset_columns(
         self, dataset_id: str
-    ) -> types.ListEvaDatasetColumnsResponse:
+    ) -> eva_types.ListEvaDatasetColumnsResponse:
         """
         Get dataset column information
 
@@ -143,7 +146,7 @@ class Client:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = types.ListEvaDatasetColumnsRequest(
+        request = eva_types.ListEvaDatasetColumnsRequest(
             WorkspaceID=self.workspace_id,
             DatasetID=dataset_id,
         )
@@ -154,8 +157,10 @@ class Client:
         self,
         task_id: str,
         row_id: str,
-        target_results: Optional[List[types.EvaTaskResultUpdateTargetContent]] = None,
-    ) -> types.ExecEvaTaskRowGroupResponse:
+        target_results: Optional[
+            List[eva_types.EvaTaskResultUpdateTargetContent]
+        ] = None,
+    ) -> eva_types.ExecEvaTaskRowGroupResponse:
         """
         Submit evaluation task row group results
 
@@ -170,7 +175,7 @@ class Client:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = types.ExecEvaTaskRowGroupRequest(
+        request = eva_types.ExecEvaTaskRowGroupRequest(
             WorkspaceID=self.workspace_id,
             TaskID=task_id,
             RowID=row_id,
@@ -184,7 +189,7 @@ class Client:
         wait=wait_fixed(1),
         before_sleep=before_sleep_log(logger, logging.INFO),
     )
-    def get_task_report(self, task_id: str) -> types.GetEvaTaskReportResponse:
+    def get_task_report(self, task_id: str) -> eva_types.GetEvaTaskReportResponse:
         """
         Get task report (with retry mechanism: 1 second interval, 3 attempts)
 
@@ -197,7 +202,7 @@ class Client:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = types.GetEvaTaskReportRequest(
+        request = eva_types.GetEvaTaskReportRequest(
             WorkspaceID=self.workspace_id, TaskID=task_id
         )
 
@@ -205,9 +210,9 @@ class Client:
 
     def _convert_to_case_data_list(
         self,
-        conversation_item: types.EvaDatasetConversationItem,
-        columns: List[types.EvaDatasetColumn],
-    ) -> List[types.CaseData]:
+        conversation_item: eva_types.EvaDatasetConversationItem,
+        columns: List[eva_types.EvaDatasetColumn],
+    ) -> List[eva_types.CaseData]:
         """
         Convert raw conversation item to case data list
 
@@ -222,7 +227,7 @@ class Client:
         column_map = {col.ID: col.Name for col in columns}
 
         # Organize data by rounds
-        rounds_data: Dict[int, Dict[str, types.CellContent]] = {}
+        rounds_data: Dict[int, Dict[str, eva_types.CellContent]] = {}
 
         for data_cell in conversation_item.DataRow:
             column_name = column_map.get(
@@ -242,40 +247,40 @@ class Client:
         case_data_list = []
 
         for round_num in sorted_rounds:
-            case_data = types.CaseData(**rounds_data[round_num])
+            case_data = eva_types.CaseData(**rounds_data[round_num])
             case_data_list.append(case_data)
 
         return case_data_list
 
     def _convert_to_cell_content(
-        self, atomic_data: types.EvaDatasetAtomicData
-    ) -> types.CellContent:
+        self, atomic_data: eva_types.EvaDatasetAtomicData
+    ) -> eva_types.CellContent:
         """
         Convert atomic data to cell content
         """
         content = []
-        if atomic_data.Type == types.DatasetAtomicDataType.TEXT:
+        if atomic_data.Type == eva_types.DatasetAtomicDataType.TEXT:
             content.append(
-                types.CellContentPart(
-                    Type=types.CellContentPartType.TEXT,
+                eva_types.CellContentPart(
+                    Type=eva_types.CellContentPartType.TEXT,
                     Text=atomic_data.TextData,
                 )
             )
-        elif atomic_data.Type == types.DatasetAtomicDataType.IMAGE:
+        elif atomic_data.Type == eva_types.DatasetAtomicDataType.IMAGE:
             content.extend(
                 [
-                    types.CellContentPart(
-                        Type=types.CellContentPartType.IMAGE_URL,
+                    eva_types.CellContentPart(
+                        Type=eva_types.CellContentPartType.IMAGE_URL,
                         ImageURL=image.URL,
                     )
                     for image in atomic_data.ImageData
                 ]
             )
-        elif atomic_data.Type == types.DatasetAtomicDataType.FILE:
+        elif atomic_data.Type == eva_types.DatasetAtomicDataType.FILE:
             content.extend(
                 [
-                    types.CellContentPart(
-                        Type=types.CellContentPartType.VIDEO_URL,
+                    eva_types.CellContentPart(
+                        Type=eva_types.CellContentPartType.VIDEO_URL,
                         VideoURL=file.URL,
                     )
                     for file in atomic_data.Files
@@ -288,12 +293,12 @@ class Client:
         dataset_id: str,
         task_name: str,
         inference_function: Callable[
-            [List[types.CaseData]], List[types.InferenceResult]
+            [List[eva_types.CaseData]], List[eva_types.InferenceResult]
         ],
         ruleset_id: str,
-        target_config: Optional[types.ModelAgentConfig] = None,
+        target_config: Optional[eva_types.ModelAgentConfig] = None,
         max_conversations: int = 10,
-    ) -> types.GetEvaTaskReportResponse:
+    ) -> eva_types.GetEvaTaskReportResponse:
         """
         Run complete evaluation process
 
@@ -352,8 +357,8 @@ class Client:
 
                 # Create target results
                 target_results = [
-                    types.EvaTaskResultUpdateTargetContent(
-                        TargetType=types.EvaTargetType.CUSTOM_APP,
+                    eva_types.EvaTaskResultUpdateTargetContent(
+                        TargetType=eva_types.EvaTargetType.CUSTOM_APP,
                         TargetID=self.app_id,
                         Results=target_content_pairs,
                     )
@@ -384,11 +389,11 @@ class Client:
     def _execute_inference_with_wrapper(
         self,
         inference_function: Callable[
-            [List[types.CaseData]], List[types.InferenceResult]
+            [List[eva_types.CaseData]], List[eva_types.InferenceResult]
         ],
-        case_data_list: List[types.CaseData],
+        case_data_list: List[eva_types.CaseData],
         row_id: str,
-    ) -> List[types.EvaTaskResultTargetContentPair]:
+    ) -> List[eva_types.EvaTaskResultTargetContentPair]:
         """
         Execute inference function and wrap results
 
@@ -414,13 +419,13 @@ class Client:
 
             # Wrap each result
             for user_result in user_results:
-                target_content_pair = types.EvaTaskResultTargetContentPair(
+                target_content_pair = eva_types.EvaTaskResultTargetContentPair(
                     Content=user_result.Content,
                     ContentThought=user_result.ContentThought,
                     Round=round_counter,
                     MessageID=None,  # Not needed
                     ConversationID=None,  # Not needed
-                    Status=types.EvaConversationStatus.SUCCEED,  # Success status
+                    Status=eva_types.EvaConversationStatus.SUCCEED,  # Success status
                     StatusMessage=None,
                     CostTokens=user_result.CostTokens,
                     InferenceDuration=inference_duration,
@@ -435,13 +440,13 @@ class Client:
             end_time = time.time()
             inference_duration = int((end_time - start_time) * 1000)
 
-            target_content_pair = types.EvaTaskResultTargetContentPair(
+            target_content_pair = eva_types.EvaTaskResultTargetContentPair(
                 Content=None,
                 ContentThought=None,
                 Round=1,
                 MessageID=None,
                 ConversationID=None,
-                Status=types.EvaConversationStatus.FAILED,
+                Status=eva_types.EvaConversationStatus.FAILED,
                 StatusMessage=str(e),  # Exception message as status message
                 CostTokens=None,
                 InferenceDuration=inference_duration,
@@ -455,13 +460,15 @@ class Client:
         return target_content_pairs
 
     def _wait_task_finished(self, task_id: str):
-        request = types.GetEvaTaskRequest(WorkspaceID=self.workspace_id, TaskID=task_id)
+        request = eva_types.GetEvaTaskRequest(
+            WorkspaceID=self.workspace_id, TaskID=task_id
+        )
         task = self.eva_service.GetEvaTask(request)
         while task.Status not in [
-            types.EvaTaskStatus.SUCCEED,
-            types.EvaTaskStatus.FAILED,
-            types.EvaTaskStatus.CANCELLED,
-            types.EvaTaskStatus.PARTIAL_SUCCEED,
+            eva_types.EvaTaskStatus.SUCCEED,
+            eva_types.EvaTaskStatus.FAILED,
+            eva_types.EvaTaskStatus.CANCELLED,
+            eva_types.EvaTaskStatus.PARTIAL_SUCCEED,
         ]:
             time.sleep(1)
             task = self.eva_service.GetEvaTask(request)
