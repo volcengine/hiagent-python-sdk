@@ -15,7 +15,8 @@ from typing import List
 from dotenv import load_dotenv
 
 # Import Eva SDK
-from libs.eva import client, types
+from libs.api.hiagent_api import eva_types
+from libs.eva import client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -25,8 +26,8 @@ load_dotenv()
 
 
 def my_inference_function(
-    case_data_list: List[types.CaseData],
-) -> List[types.InferenceResult]:
+    case_data_list: List[eva_types.CaseData],
+) -> List[eva_types.InferenceResult]:
     results = []
     message_list = []
     for case in case_data_list:
@@ -35,7 +36,7 @@ def my_inference_function(
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
         message_list.append({"role": "assistant", "content": content})
         # Create inference result
-        result = types.InferenceResult(
+        result = eva_types.InferenceResult(
             Content=content,
             CostTokens=100,
             TTFT=101,
