@@ -22,10 +22,10 @@ def invoke_aippt_tool():
         svc=get_tool_svc(),
         workspace_id="cuq0pp9s7366bfl0cns0",
         tool_id="5tg2e381qs08vmoh7ft0",
-        # credentials={
-        #     "api_key": ak,
-        #     "secret_key": sk,
-        # }
+        credentials={
+            "api_key": ak,
+            "secret_key": sk,
+        }
     )
 
     resp = tool.invoke(input={"ppt_title": "健康生活一百年"})
