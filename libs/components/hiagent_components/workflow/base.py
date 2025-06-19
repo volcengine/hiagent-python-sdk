@@ -43,8 +43,8 @@ class Workflow(Executable):
         app_key: str,
         user_id: str,
         input_schema: dict,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        name: str,
+        description: str,
     ) -> None:
         self.svc = svc
         self.app_key = app_key

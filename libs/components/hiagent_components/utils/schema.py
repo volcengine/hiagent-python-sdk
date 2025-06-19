@@ -14,40 +14,40 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 0:  # str
             return {
                 "type": "string",
-                "description": field.desc,
+                "description": field.desc or "",
             }
         case 1:  # int
             return {
                 "type": "integer",
-                "description": field.desc,
+                "description": field.desc or "",
             }
         case 2:  # bool
             return {
                 "type": "boolean",
-                "description": field.desc,
+                "description": field.desc or "",
             }
         case 3:  # number
             return {
                 "type": "number",
-                "description": field.desc,
+                "description": field.desc or "",
             }
         case 4:  # object
             schema: dict[str, Any] = {
                 "type": "object",
-                "description": field.desc,
+                "description": field.desc or "",
                 "properties": {},
             }
 
             if field.sub_parameters:
                 schema = convert_hiagent_schema_to_json_schema(field.sub_parameters)
-                schema["description"] = field.desc
+                schema["description"] = field.desc or ""
 
             return schema
 
         case 5:  # array_of_string
             schema = {
                 "type": "array",
-                "description": field.desc,
+                "description": field.desc or "",
                 "items": {
                     "type": "string",
                 },
@@ -57,7 +57,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 6:  # array_of_integer
             schema = {
                 "type": "array",
-                "description": field.desc,
+                "description": field.desc or "",
                 "items": {
                     "type": "integer",
                 },
@@ -67,7 +67,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 7:  # array_of_bool
             schema = {
                 "type": "array",
-                "description": field.desc,
+                "description": field.desc or "",
                 "items": {
                     "type": "boolean",
                 },
@@ -77,7 +77,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 8:  # array_of_number
             schema = {
                 "type": "array",
-                "description": field.desc,
+                "description": field.desc or "",
                 "items": {
                     "type": "number",
                 },
@@ -103,7 +103,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 10:  # file
             schema = {
                 "type": "object",
-                "description": field.desc,
+                "description": field.desc or "",
                 "properties": {
                     "name": {
                         "type": "string",
@@ -121,7 +121,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case 11:  # array_of_file
             schema = {
                 "type": "array",
-                "description": field.desc,
+                "description": field.desc or "",
                 "items": {
                     "type": "object",
                     "properties": {
@@ -142,7 +142,7 @@ def _convert_field_definition(field: FieldDefinition) -> dict[str, Any]:
         case -1:
             return {
                 "type": "any",
-                "description": field.desc,
+                "description": field.desc or "",
             }
         case _:
             raise ValueError(f"unknown field type {field.type}")

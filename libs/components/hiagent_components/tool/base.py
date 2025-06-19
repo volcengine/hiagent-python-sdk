@@ -25,6 +25,7 @@ class BaseTool(Executable):
     def invoke(
         self,
         input: Dict[str, Any],
+        raise_exception: bool = True,
         **kwargs: Any,
     ) -> Any:
         return self._invoke(input, **kwargs)
@@ -32,6 +33,7 @@ class BaseTool(Executable):
     async def ainvoke(
         self,
         input: Dict[str, Any],
+        raise_exception: bool = True,
         executor: Optional[Executor] = None,
         **kwargs: Any,
     ) -> Any:
