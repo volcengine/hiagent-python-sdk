@@ -88,12 +88,13 @@ async def on_chat_start():
 
 
 class FirstTokenLatencyCallback(BaseCallbackHandler):
-    def __init__(self):
+    def __init__(self, message_id: str):
         super().__init__()
         self.start_time = None
         self.first_token_received = False
         self.input = ""
         self.latency_first_resp = None
+        self.message_id = message_id
 
     def on_llm_start(
         self,
@@ -147,6 +148,7 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
         with helper.start_trace(name="llm_end", provider=provider) as span:
             span.set_attributes(
                 {
+                    semconv.SemanticConvention.MESSAGE_ID: self.message_id,
                     semconv.SemanticConvention.LATENCY: round(latency, 1),
                     semconv.SemanticConvention.LATENCT_FIRST_RESP: self.latency_first_resp,
                     semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
@@ -192,11 +194,12 @@ async def on_message(message: cl.Message):
 
     msg = cl.Message(content="")
 
+    message_id = str(uuid.uuid4())
     with helper.start_trace(name="do-worker", provider=provider) as span:
         span.set_attributes(
             {
                 semconv.SemanticConvention.CONVERSATION_ID: conversation_id,
-                semconv.SemanticConvention.MESSAGE_ID: str(uuid.uuid4()),
+                semconv.SemanticConvention.MESSAGE_ID: message_id,
                 semconv.SemanticConvention.INPUT: message.content,
                 semconv.SemanticConvention.INPUT_RAW: message.content,
                 semconv.SemanticConvention.MODEL_ID: model_id,
@@ -208,7 +211,7 @@ async def on_message(message: cl.Message):
             config=RunnableConfig(
                 callbacks=[
                     cl.LangchainCallbackHandler(),
-                    FirstTokenLatencyCallback(),
+                    FirstTokenLatencyCallback(message_id=message_id),
                 ]
             ),
         ):
