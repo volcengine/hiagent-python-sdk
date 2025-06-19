@@ -5,10 +5,14 @@ Eva SDK Usage Example
 Demonstrates how to use Eva SDK to create and execute evaluation tasks
 """
 
+import argparse
 import json
 import logging
-import time
+import os
+from time import sleep
 from typing import List
+
+from dotenv import load_dotenv
 
 # Import Eva SDK
 from libs.eva import client, types
@@ -17,6 +21,8 @@ from libs.eva import client, types
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+load_dotenv()
+
 
 def my_inference_function(
     case_data_list: List[types.CaseData],
@@ -24,7 +30,8 @@ def my_inference_function(
     results = []
     message_list = []
     for case in case_data_list:
-        message_list.append({"role": "user", "content": case["input"].TextData})
+        input = case["input"][0].Text
+        message_list.append({"role": "user", "content": input})
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
         message_list.append({"role": "assistant", "content": content})
         # Create inference result
@@ -34,6 +41,7 @@ def my_inference_function(
             TTFT=101,
         )
         results.append(result)
+    sleep(0.5)
 
     return results
 
@@ -41,43 +49,43 @@ def my_inference_function(
 def main():
     """Main function: Run complete evaluation example"""
 
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Eva SDK Evaluation Example")
+    parser.add_argument(
+        "-d", "--dataset-id", required=True, help="Dataset ID for evaluation"
+    )
+    parser.add_argument(
+        "-r", "--ruleset-id", required=True, help="Ruleset ID for evaluation"
+    )
+    parser.add_argument("-n", "--name", required=True, help="Task name")
+    args = parser.parse_args()
+
     print("=== Eva SDK Example ===\n")
 
     # Initialize client
     provider = client.init(
-        endpoint="http://33.234.30.131:30040",
-        ak="HIAKY3VtRWdDZGtRbnRCZ05zbjJ1bWR1bmo5Zmptb2JlYmc",
-        sk="GH9G/EAA30mEd0JJyCkg9Fj/EroJRev/Yw0S30BXZgFrflAi3wLkb1l/1Q==",
-        workspace_id="cv60rjfsul75mk1a4hqg",
-        app_id="d18li42u8je36l3mcsvg",
+        endpoint=os.getenv("HIAGENT_TOP_ENDPOINT"),
+        ak=os.getenv("VOLC_ACCESSKEY"),
+        sk=os.getenv("VOLC_SECRETKEY"),
+        workspace_id=os.getenv("WORKSPACE_ID"),
+        app_id=os.getenv("CUSTOM_APP_ID"),
     )
 
-    # Prepare evaluation parameters
-    dataset_id = "d0jb420ge4sqeo4mvo30"  # Replace with your actual dataset ID
-    # Get or create actual ruleset ID
-    ruleset_id = "d0jb7roge4sqeo4mvo60"
-
-    target_config = types.ModelAgentConfig(
-        Temperature=0.7,
-        TopP=0.9,
-        MaxTokens=2048,
-        RoundsReserved=10,
-        RagNum=5,
-        MaxIterations=5,
-        RagEnabled=False,
-        ReasoningMode=False,
-        ReasoningSwitch=False,
-    )
+    # Use command line arguments
+    dataset_id = args.dataset_id
+    ruleset_id = args.ruleset_id
+    task_name = args.name
 
     try:
         # Run evaluation
         print("Starting evaluation...")
+        print(f"Dataset ID: {dataset_id}")
+        print(f"Ruleset ID: {ruleset_id}")
         report = provider.run_evaluation(
             dataset_id=dataset_id,
-            task_name=f"simple_eva_{time.strftime('%Y%m%d%H%M%S')}",
+            task_name=task_name,
             inference_function=my_inference_function,
             ruleset_id=ruleset_id,
-            target_config=target_config,
             max_conversations=5,
         )
 
@@ -99,6 +107,7 @@ def main():
                 print(f"     Target Name: {target.TargetDetail.TargetName}")
                 print(f"     Average Token Cost: {target.AvgCostTokens}")
                 print(f"     Average TTFT: {target.AvgTTFT}ms")
+                print(f"     Average Duration: {target.AvgDuration}ms")
                 print(f"     Total Token Cost: {target.CostTokens}")
 
         # Display rule information
@@ -111,11 +120,11 @@ def main():
                     print(f"     Average Score: {rule_target.AvgScore}")
                     print(f"     Percentage: {rule_target.Percent}%")
 
-    except Exception as e:
-        print(f"✗ Evaluation execution failed: {e}")
-        logger.error(f"Evaluation execution failed: {e}", exc_info=True)
+        print("\n=== Evaluation Completed ===")
 
-    print("\n=== Evaluation Completed ===")
+    except Exception as e:
+        logger.error(f"Evaluation execution failed: {e}", exc_info=True)
+        print(f"✗ Evaluation execution failed: {e}")
 
 
 if __name__ == "__main__":

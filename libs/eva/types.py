@@ -30,6 +30,46 @@ class EvaTaskStatus(str, Enum):
     CANCELLED = "Cancelled"  # Task cancelled
 
 
+# New CellContent related types
+class CellContentPartType(str, Enum):
+    """Cell content part type"""
+
+    TEXT = "text"
+    IMAGE_URL = "image_url"
+    VIDEO_URL = "video_url"
+
+
+class ChatMessageImageURL(BaseModel):
+    """Chat message image URL"""
+
+    URL: Optional[str] = Field(default=None, alias="url", description="Image URL")
+
+
+class ChatMessageVideoURL(BaseModel):
+    """Chat message video URL"""
+
+    URL: str = Field(alias="url", description="Video URL")
+
+
+class CellContentPart(BaseModel):
+    """Cell content part"""
+
+    Type: Optional[CellContentPartType] = Field(
+        default=None, alias="type", description="Content part type"
+    )
+    Text: Optional[str] = Field(default=None, alias="text", description="Text content")
+    ImageURL: Optional[ChatMessageImageURL] = Field(
+        default=None, alias="image_url", description="Image URL"
+    )
+    VideoURL: Optional[ChatMessageVideoURL] = Field(
+        default=None, alias="video_url", description="Video URL"
+    )
+
+
+# CellContent is a list of CellContentPart
+CellContent = List[CellContentPart]
+
+
 class ModelAgentConfig(BaseModel):
     """Model basic configuration"""
 
@@ -64,17 +104,14 @@ class EvaTaskTarget(BaseModel):
     Type: str = Field(
         title="Evaluation target type",
         description="Evaluation target type, such as BuiltinModel, BuiltinAgent, BuiltinPrompt, CustomAPP",
-        example="CustomAPP",
     )
     TargetID: str = Field(
         title="Evaluation target ID",
         description="Evaluation target ID",
-        example="target123",
     )
     TargetName: str = Field(
         title="Evaluation target name",
         description="Evaluation target name",
-        example="My custom model",
     )
     TargetIcon: Optional[str] = Field(
         default=None,
@@ -89,7 +126,6 @@ class EvaTaskTarget(BaseModel):
         default=1,
         title="QPS configuration",
         description="QPS configuration of the evaluation target",
-        example=1,
     )
 
 
@@ -109,18 +145,15 @@ class CreateEvaTaskRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
     TaskTemplateID: Optional[str] = Field(
         default=None,
         title="Task Template ID",
         description="Task Template ID",
-        example="tmxxxxxxxxxxxxxxxxxxx",
     )
     Name: str = Field(
         title="Task Name",
         description="Evaluation task name",
-        example="AI Assistant Evaluation Task",
         min_length=1,
         max_length=100,
     )
@@ -128,7 +161,6 @@ class CreateEvaTaskRequest(BaseModel):
         default="",
         title="Task Description",
         description="Evaluation task description",
-        example="Test AI assistant's multi-turn conversation capabilities",
     )
     Targets: List[EvaTaskTarget] = Field(
         title="Task Evaluation Targets", description="Task evaluation target list"
@@ -136,18 +168,15 @@ class CreateEvaTaskRequest(BaseModel):
     DatasetID: str = Field(
         title="Evaluation Dataset ID",
         description="Evaluation dataset ID",
-        example="dsxxxxxxxxxxxxxxxxxxx",
     )
     RulesetID: str = Field(
         title="Task Evaluation Rules",
         description="Task evaluation rule ID",
-        example="rsxxxxxxxxxxxxxxxxxxx",
     )
     RunImmediately: bool = Field(
         default=True,
         title="Run Task Immediately",
         description="Whether to run the task immediately",
-        example=True,
     )
     DatasetConfig: Optional[DatasetTaskConfig] = Field(
         default=None,
@@ -160,13 +189,11 @@ class CreateEvaTaskResponse(BaseModel):
     TaskID: str = Field(
         title="Evaluation Task ID",
         description="Created evaluation task ID",
-        example="tkxxxxxxxxxxxxxxxxxxx",
     )
     Status: Optional[str] = Field(
         default="created",
         title="Task Status",
         description="Task status",
-        example="created",
     )
 
 
@@ -174,22 +201,17 @@ class ListEvaDatasetConversationsRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
-    DatasetID: str = Field(
-        title="Dataset ID", description="Dataset ID", example="dsxxxxxxxxxxxxxxxxxxx"
-    )
+    DatasetID: str = Field(title="Dataset ID", description="Dataset ID")
     PageNumber: Optional[int] = Field(
         default=1,
         title="Page Number",
         description="Page number, starting from 1",
-        example=1,
     )
     PageSize: Optional[int] = Field(
         default=10,
         title="Page Size",
         description="Number of records returned per page",
-        example=10,
     )
 
 
@@ -297,11 +319,8 @@ class ListEvaDatasetColumnsRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
-    DatasetID: str = Field(
-        title="Dataset ID", description="Dataset ID", example="dsxxxxxxxxxxxxxxxxxxx"
-    )
+    DatasetID: str = Field(title="Dataset ID", description="Dataset ID")
 
 
 class ListEvaDatasetColumnsResponse(BaseModel):
@@ -354,7 +373,7 @@ class CaseData(BaseModel):
 
     model_config = {"extra": "allow"}  # Allow dynamic fields
 
-    def get_column_data(self, column_name: str) -> Optional[EvaDatasetAtomicData]:
+    def get_column_data(self, column_name: str) -> Optional[CellContent]:
         """
         Get data from specified column
 
@@ -362,7 +381,7 @@ class CaseData(BaseModel):
             column_name: Column name
 
         Returns:
-            Atomic data of the column, returns None if not exists
+            Cell content of the column, returns None if not exists
         """
         # In Pydantic v2, extra fields are stored in __pydantic_extra__
         if hasattr(self, "__pydantic_extra__"):
@@ -397,7 +416,7 @@ class CaseData(BaseModel):
         return []
 
     # Dictionary-style operation support
-    def __getitem__(self, column_name: str) -> Optional[EvaDatasetAtomicData]:
+    def __getitem__(self, column_name: str) -> Optional[CellContent]:
         """
         Support case_data[column_name] access pattern
 
@@ -405,17 +424,17 @@ class CaseData(BaseModel):
             column_name: Column name
 
         Returns:
-            Atomic data of the column
+            Cell content of the column
         """
         return self.get_column_data(column_name)
 
-    def __setitem__(self, column_name: str, value: EvaDatasetAtomicData):
+    def __setitem__(self, column_name: str, value: CellContent):
         """
         Support case_data[column_name] = value assignment pattern
 
         Args:
             column_name: Column name
-            value: Atomic data
+            value: Cell content
         """
         if not hasattr(self, "__pydantic_extra__"):
             self.__pydantic_extra__ = {}
@@ -447,7 +466,7 @@ class CaseData(BaseModel):
         Support for column_name, data in case_data.items() iteration pattern
 
         Returns:
-            Iterator of (column_name, atomic_data) tuples
+            Iterator of (column_name, cell_content) tuples
         """
         for column_name in self.list_columns():
             yield column_name, self.get_column_data(column_name)
@@ -461,12 +480,12 @@ class CaseData(BaseModel):
         """
         return self.list_columns()
 
-    def values(self) -> List[Optional[EvaDatasetAtomicData]]:
+    def values(self) -> List[Optional[CellContent]]:
         """
         Get data from all columns
 
         Returns:
-            List of atomic data
+            List of cell content
         """
         return [
             self.get_column_data(column_name) for column_name in self.list_columns()
@@ -481,7 +500,7 @@ class CaseData(BaseModel):
             default: Default value
 
         Returns:
-            Column data or default value
+            Cell content or default value
         """
         data = self.get_column_data(column_name)
         return data if data is not None else default
@@ -566,16 +585,12 @@ class ExecEvaTaskRowGroupRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
     TaskID: str = Field(
         title="Evaluation Task ID",
         description="Evaluation task ID",
-        example="tkxxxxxxxxxxxxxxxxxxx",
     )
-    RowID: str = Field(
-        title="Row ID", description="Row ID", example="rowxxxxxxxxxxxxxxxxxxx"
-    )
+    RowID: str = Field(title="Row ID", description="Row ID")
     TargetResults: Optional[List[EvaTaskResultUpdateTargetContent]] = Field(
         default=None,
         title="Target Results",
@@ -593,12 +608,10 @@ class GetEvaTaskReportRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
     TaskID: str = Field(
         title="Evaluation Task ID",
         description="Evaluation task ID",
-        example="tkxxxxxxxxxxxxxxxxxxx",
     )
 
 
@@ -700,18 +713,15 @@ class CreateEvaRulesetRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
     Name: str = Field(
         title="Evaluation Ruleset Name",
         description="Evaluation ruleset name",
-        example="Default Ruleset",
     )
     Description: Optional[str] = Field(
         default=None,
         title="Evaluation Ruleset Description",
         description="Evaluation ruleset description",
-        example="Default ruleset for evaluation",
     )
 
 
@@ -719,7 +729,6 @@ class CreateEvaRulesetResponse(BaseModel):
     RulesetID: str = Field(
         title="Evaluation Ruleset ID",
         description="Created evaluation ruleset ID",
-        example="rsxxxxxxxxxxxxxxxxxxx",
     )
 
 
@@ -727,19 +736,16 @@ class ListEvaRulesetsRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
-        example="wcxxxxxxxxxxxxxxxxxxx",
     )
     PageNumber: Optional[int] = Field(
         default=1,
         title="Page Number",
         description="Page number, starting from 1",
-        example=1,
     )
     PageSize: Optional[int] = Field(
         default=10,
         title="Page Size",
         description="Number of records returned per page",
-        example=10,
     )
 
 
@@ -772,9 +778,7 @@ class ListEvaRulesetsResponse(BaseModel):
     Items: List[EvaRulesetItem] = Field(
         title="Evaluation Ruleset List", description="Evaluation ruleset list"
     )
-    Total: int = Field(
-        title="Total", description="Total number of rulesets", example=100
-    )
+    Total: int = Field(title="Total", description="Total number of rulesets")
 
 
 # GetEvaTask related type definitions

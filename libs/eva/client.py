@@ -1,7 +1,7 @@
 # coding:utf-8
 import logging
 import time
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 
 from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
 
@@ -222,7 +222,7 @@ class Client:
         column_map = {col.ID: col.Name for col in columns}
 
         # Organize data by rounds
-        rounds_data = {}  # round -> {column_name: data}
+        rounds_data: Dict[int, Dict[str, types.CellContent]] = {}
 
         for data_cell in conversation_item.DataRow:
             column_name = column_map.get(
@@ -233,9 +233,11 @@ class Client:
                 round_num = conv_data.Round
                 if round_num not in rounds_data:
                     rounds_data[round_num] = {}
-                rounds_data[round_num][column_name] = conv_data.AtomicData
+                rounds_data[round_num][column_name] = self._convert_to_cell_content(
+                    conv_data.AtomicData
+                )
 
-        # Create CaseData list in round order
+        # Create CellContent list in round order
         sorted_rounds = sorted(rounds_data.keys())
         case_data_list = []
 
@@ -244,6 +246,42 @@ class Client:
             case_data_list.append(case_data)
 
         return case_data_list
+
+    def _convert_to_cell_content(
+        self, atomic_data: types.EvaDatasetAtomicData
+    ) -> types.CellContent:
+        """
+        Convert atomic data to cell content
+        """
+        content = []
+        if atomic_data.Type == types.DatasetAtomicDataType.TEXT:
+            content.append(
+                types.CellContentPart(
+                    Type=types.CellContentPartType.TEXT,
+                    Text=atomic_data.TextData,
+                )
+            )
+        elif atomic_data.Type == types.DatasetAtomicDataType.IMAGE:
+            content.extend(
+                [
+                    types.CellContentPart(
+                        Type=types.CellContentPartType.IMAGE_URL,
+                        ImageURL=image.URL,
+                    )
+                    for image in atomic_data.ImageData
+                ]
+            )
+        elif atomic_data.Type == types.DatasetAtomicDataType.FILE:
+            content.extend(
+                [
+                    types.CellContentPart(
+                        Type=types.CellContentPartType.VIDEO_URL,
+                        VideoURL=file.URL,
+                    )
+                    for file in atomic_data.Files
+                ]
+            )
+        return content
 
     def run_evaluation(
         self,
@@ -372,9 +410,7 @@ class Client:
             # Execute user's inference function, passing case data list
             user_results = inference_function(case_data_list)
             end_time = time.time()
-            inference_duration = int(
-                (end_time - start_time) * 1000
-            )  # Convert to milliseconds
+            inference_duration = int((end_time - start_time) * 1000)
 
             # Wrap each result
             for user_result in user_results:
