@@ -668,10 +668,10 @@ class EvaReportTarget(BaseModel):
     AvgCostTokens: float = Field(
         title="Average Cost Tokens", description="Average number of tokens consumed"
     )
-    AvgDuration: int = Field(
+    AvgDuration: float = Field(
         title="Average Duration", description="Average duration in milliseconds"
     )
-    AvgTTFT: int = Field(
+    AvgTTFT: float = Field(
         title="Average Time to First Token",
         description="Average time to first token in milliseconds",
     )
