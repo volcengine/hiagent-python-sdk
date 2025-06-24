@@ -18,10 +18,8 @@ from typing import Callable, Dict, List, Optional
 
 from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
 
-from libs.observe.hiagent_observe.client import AuthSession
-
-from ..api.hiagent_api import eva_types
-from ..api.hiagent_api.eva import EvaService
+from hiagent_api import eva_types
+from hiagent_api.eva import EvaService
 
 logger = logging.getLogger(__name__)
 

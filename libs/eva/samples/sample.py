@@ -28,8 +28,8 @@ from typing import List
 from dotenv import load_dotenv
 
 # Import Eva SDK
-from libs.api.hiagent_api import eva_types
-from libs.eva import client
+from hiagent_api import eva_types
+from hiagent_eva import client
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

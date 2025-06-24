@@ -15,8 +15,8 @@
 Eva SDK - Evaluation Service SDK
 """
 
-from ..api.hiagent_api.eva import EvaService
-from ..api.hiagent_api.eva_types import (
+from hiagent_api.eva import EvaService
+from hiagent_api.eva_types import (
     AgentModeStrategy,
     CaseData,
     CreateEvaTaskRequest,
@@ -47,7 +47,7 @@ from ..api.hiagent_api.eva_types import (
     ListEvaDatasetConversationsResponse,
     ModelAgentConfig,
 )
-from .client import Client
+from .hiagent_eva.client import Client
 
 __version__ = "1.0.0"
 
