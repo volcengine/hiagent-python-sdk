@@ -14,6 +14,9 @@ dependencies = [
 ]
 
 [dependency-groups]
+dev = [
+    "langchain-openai>=0.3.25",
+]
 integrations = [
     "mcp>=1.9.4",
     "langchain-core>=0.3.0",
