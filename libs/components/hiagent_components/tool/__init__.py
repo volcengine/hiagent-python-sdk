@@ -14,6 +14,6 @@
 from __future__ import annotations
 
 from hiagent_components.tool.base import BaseTool
-from hiagent_components.tool.tool import ExecutableTool
+from hiagent_components.tool.tool import ExecutableTool, Tool
 
-__all__ = ["BaseTool", "ExecutableTool"]
+__all__ = ["BaseTool", "ExecutableTool", "Tool"]
