@@ -89,7 +89,7 @@ if __name__ == "__main__":
     # https://smith.langchain.com/hub/hwchase17/react
     client = Client()
     prompt = client.pull_prompt("hwchase17/structured-chat-agent")
-    prompt.messages[0].prompt.template += "\n\n## Noice\n\n tool's action_input must be json object rather than string"
+    prompt.messages[0].prompt.template += "\n\n## Notice\n\n tool's action_input must be json object rather than string"
 
     callbacks = [StdOutCallbackHandler()]
 

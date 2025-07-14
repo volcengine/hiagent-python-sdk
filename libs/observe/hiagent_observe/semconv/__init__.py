@@ -23,7 +23,7 @@ class SpanType(Enum):
     """
     END 停止调用模型或者工作流
     """
-    LLM = "llm"
+    LLM = "core_llm"
     """
     LLM 大模型调用节点
     """
@@ -39,11 +39,15 @@ class SpanType(Enum):
     """
     WORKFLOW 代表工作流的调用节点
     """
-    RERANK = "rerank"
+    WORKFLOW_NODE = "workflow_node"
+    """
+    WORKFLOW_NODE 代表工作流中的节点调用
+    """
+    RERANK = "core_rerank"
     """
     RERANK 代表 rerank 模型调用节点
     """
-    EMBEDDINGS = "embeddings"
+    EMBEDDINGS = "core_embeddings"
     """
     EMBEDDINGS 代表向量化模型调用节点
     """
@@ -54,6 +58,10 @@ class SpanType(Enum):
     TERMINLOGY = "terminology"
     """
     TOOL_CALL 代表术语库调用节点
+    """
+    DATABASE = "database"
+    """
+    DATABASE 代表数据库调用节点
     """
 
 
