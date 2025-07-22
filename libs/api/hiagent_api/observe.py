@@ -65,6 +65,13 @@ class ObserveService(Service):
                 {},
                 {},
             ),
+            "ListTraceSpans": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "ListTraceSpans", "Version": "2025-05-01"},
+                {},
+                {},
+            ),
         }
         return api_info
 
@@ -94,6 +101,26 @@ class ObserveService(Service):
         """
         return observe_types.CreateApiTokenResponse.model_validate(
             self.__request("CreateApiToken", params.model_dump())
+        )
+
+    def ListTraceSpans(
+        self, params: observe_types.ListTraceSpansRequest
+    ) -> observe_types.ListTraceSpansResponse:
+        """
+        获取 trace spans
+
+        Args:
+            params (observe_types.CreateApiTokenRequest):
+
+        Raises:
+            Exception:
+
+        Returns:
+            Dict:
+
+        """
+        return observe_types.ListTraceSpansResponse.model_validate(
+            self.__request("ListTraceSpans", params)
         )
 
     def __request(self, action, params):

@@ -24,3 +24,8 @@ packages = ["."]
 exclude = [
     "examples/",
 ]
+
+[dependency-groups]
+dev = [
+    "dotenv>=0.9.9",
+]
