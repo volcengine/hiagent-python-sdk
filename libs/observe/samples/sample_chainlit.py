@@ -151,6 +151,8 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                     semconv.SemanticConvention.MESSAGE_ID: self.message_id,
                     semconv.SemanticConvention.LATENCY: round(latency, 1),
                     semconv.SemanticConvention.LATENCT_FIRST_RESP: self.latency_first_resp,
+                    semconv.SemanticConvention.MODEL_ID: model_id,
+                    semconv.SemanticConvention.MODEL_NAME: model_name,
                     semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
                     semconv.SemanticConvention.INPUT: json.dumps(
                         {
