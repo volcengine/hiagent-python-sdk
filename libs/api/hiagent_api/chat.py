@@ -60,7 +60,7 @@ from ..hiagent_api.chat_types import (
     ToolMessageChatEvent,
     ToolMessageOutputEndChatEvent,
     ToolMessageOutputStartChatEvent,
-    ChatRequestAgain,
+    ChatAgainRequest, GetConversationListRequest, GetConversationListResponse,
 )
 
 
@@ -189,7 +189,7 @@ class ChatService(Service, AppAPIMixin):
                 yield chat_event
 
     def chat_again(
-            self, app_key: str, chat_again: ChatRequestAgain
+            self, app_key: str, chat_again: ChatAgainRequest
     ) -> Generator[ChatEvent, None, None]:
         params = chat_again.model_dump(by_alias=True)
         g = self._sse_post(app_key, "query_again_v2", params)
@@ -200,7 +200,7 @@ class ChatService(Service, AppAPIMixin):
                 yield chat_event
 
     async def achat_again(
-            self, app_key: str, chat: ChatRequestAgain
+            self, app_key: str, chat: ChatAgainRequest
     ) -> AsyncGenerator[ChatEvent, None]:
         params = chat.model_dump(by_alias=True)
         g = self._asse_post(app_key, "query_again_v2", params)
@@ -209,6 +209,26 @@ class ChatService(Service, AppAPIMixin):
             chat_event = parse_chat_event(event_data)
             if chat_event:
                 yield chat_event
+
+    def get_conversation_list(
+            self, app_key: str, req: GetConversationListRequest
+    ) -> GetConversationListResponse:
+        return GetConversationListResponse.model_validate_json(
+            self._post(
+                app_key, "get_conversation_list", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_conversation_list(
+            self, app_key: str, req: GetConversationListRequest
+    ) -> GetConversationListResponse:
+        return GetConversationListResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_conversation_list", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
 
 
 def parse_chat_event(event_data: dict) -> Optional[ChatEvent]:

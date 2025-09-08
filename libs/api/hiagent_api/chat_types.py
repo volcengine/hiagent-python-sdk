@@ -104,12 +104,48 @@ class VariableConfig(BaseSchema):
 
 
 class GetAppConfigPreviewResponse(BaseSchema):
+    tenant_id: str = Field(
+        description="tenant id",
+        validation_alias="TenantID",
+    )
+    workspace_id: str = Field(
+        description="workspace id",
+        validation_alias="WorkspaceID",
+    )
+    variable_configs: Optional[list[VariableConfig]] = Field(
+        description="variable_configs", validation_alias="VariableConfigs", default=None
+    )
     name: str = Field(
         description="app name",
         validation_alias="Name",
     )
-    variable_configs: Optional[list[VariableConfig]] = Field(
-        description="variable_configs", validation_alias="VariableConfigs", default=None
+    open_message: str = Field(
+        description="open message",
+        validation_alias="OpenMessage",
+    )
+    open_query: str = Field(
+        description="open query",
+        validation_alias="OpenQuery",
+    )
+    icon: str = Field(
+        description="icon",
+        validation_alias="Icon",
+    )
+    background: str = Field(
+        description="icon background color",
+        validation_alias="Background",
+    )
+    suggest_enabled: bool = Field(
+        description="chat suggestion enabled ",
+        validation_alias="SuggestEnabled",
+    )
+    image: str = Field(
+        description="image",
+        validation_alias="Image",
+    )
+    agent_mode: str = Field(
+        description="agent mode: Single or Multi",
+        validation_alias="AgentMode",
     )
 
 
@@ -599,7 +635,7 @@ class ThinkMessageChatEvent(ChatEvent):
 class ThinkMessageOutputEndChatEvent(ChatEvent): ...
 
 
-class ChatRequestAgain(BaseSchema):
+class ChatAgainRequest(BaseSchema):
     app_key: str = Field(
         description="app key",
         serialization_alias="AppKey",
@@ -615,4 +651,37 @@ class ChatRequestAgain(BaseSchema):
     user_id: str = Field(
         description="user id",
         serialization_alias="UserID",
+    )
+
+
+class GetConversationListRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+
+
+class ConversationInfo(BaseSchema):
+    app_conversation_id: str = Field(
+        description="conversation id",
+        validation_alias="AppConversationID",
+    )
+    conversation_id: str = Field(
+        description="conversation id",
+        validation_alias="ConversationID",
+    )
+    conversation_name: str = Field(
+        description="conversation name",
+        validation_alias="ConversationName",
+    )
+
+
+class GetConversationListResponse(BaseSchema):
+    conversation_list: list[ConversationInfo] = Field(
+        description="conversation list",
+        validation_alias="ConversationList",
     )
