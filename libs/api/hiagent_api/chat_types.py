@@ -685,3 +685,25 @@ class GetConversationListResponse(BaseSchema):
         description="conversation list",
         validation_alias="ConversationList",
     )
+
+
+class GetConversationInputsRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    app_conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="AppConversationID",
+    )
+
+
+class GetConversationInputsResponse(BaseSchema):
+    inputs: dict[str, str] = Field(
+        description="conversation inputs",
+        validation_alias="Inputs",
+    )
