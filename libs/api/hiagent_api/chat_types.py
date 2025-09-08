@@ -16,7 +16,7 @@ from typing import Optional
 from pydantic import Field
 from strenum import StrEnum
 
-from hiagent_api.base import BaseSchema
+from ..hiagent_api.base import BaseSchema
 
 
 class CreateConversationRequest(BaseSchema):
@@ -509,6 +509,9 @@ class InterruptedChatEvent(ChatEvent):
     interrupted_msg: str = Field(
         description="interrupted message",
     )
+    interrupted_type: str = Field(
+        description="interrupted type",
+    )
 
 
 class AgentIntentionChatEvent(ChatEvent):
@@ -594,3 +597,22 @@ class ThinkMessageChatEvent(ChatEvent):
 
 
 class ThinkMessageOutputEndChatEvent(ChatEvent): ...
+
+
+class ChatRequestAgain(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    app_conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="AppConversationID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )

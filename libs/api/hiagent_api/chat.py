@@ -19,8 +19,8 @@ from volcengine.ApiInfo import ApiInfo
 from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
-from hiagent_api.base import AppAPIMixin, Service
-from hiagent_api.chat_types import (
+from ..hiagent_api.base import AppAPIMixin, Service
+from ..hiagent_api.chat_types import (
     AgentIntentionChatEvent,
     AgentJumpChatEvent,
     AgentTakeOverChatEvent,
@@ -60,6 +60,7 @@ from hiagent_api.chat_types import (
     ToolMessageChatEvent,
     ToolMessageOutputEndChatEvent,
     ToolMessageOutputStartChatEvent,
+    ChatRequestAgain,
 )
 
 
@@ -92,7 +93,7 @@ class ChatService(Service, AppAPIMixin):
         return api_info
 
     def create_conversation(
-        self, app_key: str, conversation: CreateConversationRequest
+            self, app_key: str, conversation: CreateConversationRequest
     ) -> CreateConversationResponse:
         """创建会话
         Args:
@@ -110,7 +111,7 @@ class ChatService(Service, AppAPIMixin):
         )
 
     async def acreate_conversation(
-        self, app_key: str, conversation: CreateConversationRequest
+            self, app_key: str, conversation: CreateConversationRequest
     ) -> CreateConversationResponse:
         """创建会话
         Args:
@@ -128,7 +129,7 @@ class ChatService(Service, AppAPIMixin):
         )
 
     def get_app(
-        self, app_key: str, params: GetAppConfigPreviewRequest
+            self, app_key: str, params: GetAppConfigPreviewRequest
     ) -> GetAppConfigPreviewResponse:
         return GetAppConfigPreviewResponse.model_validate_json(
             self._post(
@@ -138,7 +139,7 @@ class ChatService(Service, AppAPIMixin):
         )
 
     async def aget_app(
-        self, app_key: str, params: GetAppConfigPreviewRequest
+            self, app_key: str, params: GetAppConfigPreviewRequest
     ) -> GetAppConfigPreviewResponse:
         return GetAppConfigPreviewResponse.model_validate_json(
             await self._apost(
@@ -154,7 +155,7 @@ class ChatService(Service, AppAPIMixin):
         return BlockingChatResponse.model_validate_json(res, by_alias=True)
 
     async def achat_blocking(
-        self, app_key: str, chat: ChatRequest
+            self, app_key: str, chat: ChatRequest
     ) -> BlockingChatResponse:
         chat.response_mode = "blocking"
         res = await self._apost(
@@ -164,7 +165,7 @@ class ChatService(Service, AppAPIMixin):
         return BlockingChatResponse.model_validate_json(res, by_alias=True)
 
     def chat_streaming(
-        self, app_key: str, chat: ChatRequest
+            self, app_key: str, chat: ChatRequest
     ) -> Generator[ChatEvent, None, None]:
         chat.response_mode = "streaming"
         params = chat.model_dump(by_alias=True)
@@ -176,11 +177,33 @@ class ChatService(Service, AppAPIMixin):
                 yield chat_event
 
     async def achat_streaming(
-        self, app_key: str, chat: ChatRequest
+            self, app_key: str, chat: ChatRequest
     ) -> AsyncGenerator[ChatEvent, None]:
         chat.response_mode = "streaming"
         params = chat.model_dump(by_alias=True)
         g = self._asse_post(app_key, "chat_query_v2", params)
+        async for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_chat_event(event_data)
+            if chat_event:
+                yield chat_event
+
+    def chat_again(
+            self, app_key: str, chat_again: ChatRequestAgain
+    ) -> Generator[ChatEvent, None, None]:
+        params = chat_again.model_dump(by_alias=True)
+        g = self._sse_post(app_key, "query_again_v2", params)
+        for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_chat_event(event_data)
+            if chat_event:
+                yield chat_event
+
+    async def achat_again(
+            self, app_key: str, chat: ChatRequestAgain
+    ) -> AsyncGenerator[ChatEvent, None]:
+        params = chat.model_dump(by_alias=True)
+        g = self._asse_post(app_key, "query_again_v2", params)
         async for event in g:
             event_data = json.loads(event.data)
             chat_event = parse_chat_event(event_data)
