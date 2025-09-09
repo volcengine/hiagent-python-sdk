@@ -1220,11 +1220,106 @@ class ChatContinueRequest(BaseSchema):
         description="user id",
         serialization_alias="UserID",
     )
-    message_id:str = Field(
+    message_id: str = Field(
         description="message id",
         serialization_alias="MessageID",
     )
-    resp_data_standard:bool = Field(
+    resp_data_standard: bool = Field(
         description="is resp data standard or not",
         serialization_alias="RespDataStandard",
     )
+
+
+class Sorter(BaseSchema):
+    sort_field: str = Field(
+        description="sort field",
+        validation_alias="SortField",
+    )
+    sort_order: str = Field(
+        description="sort order: desc or asc, default desc",
+        validation_alias="SortOrder",
+    )
+
+
+class ListOpt(BaseSchema):
+    sort: list[Sorter] = Field(
+        description="sort list",
+        serialization_alias="Sort",
+    )
+    page_number: int = Field(
+        description="page number",
+        serialization_alias="PageNumber",
+    )
+    page_size: int = Field(
+        description="page size",
+        serialization_alias="PageSize",
+    )
+
+
+class ListLongMemoryFilter(BaseSchema):
+    start_time: str = Field(
+        description="start time, timeRFC3339 format",
+        serialization_alias="StartTime",
+    )
+    end_time: str = Field(
+        description="end time, timeRFC3339 format",
+        serialization_alias="EndTime",
+    )
+    keyword: str = Field(
+        description="keyword",
+        serialization_alias="Keyword",
+    )
+
+
+class ListLongMemoryRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    list_opt: Optional[ListOpt] = Field(
+        description="list opt",
+        serialization_alias="ListOpt",
+    )
+    filter: Optional[ListLongMemoryFilter] = Field(
+        description="list long memory filter",
+        serialization_alias="Filter",
+    )
+
+
+class LongMemoryItem(BaseSchema):
+    memory_id: str = Field(
+        description="long memory id",
+        validation_alias="MemoryID",
+    )
+    memory:str = Field(
+        description="long memory",
+        validation_alias="Memory",
+    )
+    memory_vector_raw_dim: int = Field(
+        description="memory vector raw dim",
+        validation_alias="MemoryVectorRawDim",
+    )
+    created_timestamp: int = Field(
+        description="created timestamp, seconds granularity",
+        validation_alias="CreateTimestamp",
+    )
+    updated_timestamp: int = Field(
+        description="updated timestamp, seconds granularity",
+        validation_alias="UpdateTimestamp",
+    )
+
+
+class ListLongMemoryResponse(BaseSchema):
+    total: int = Field(
+        description="total",
+        validation_alias="Total",
+    )
+    items: list[LongMemoryItem] = Field(
+        description="items",
+        validation_alias="Items",
+    )
+
