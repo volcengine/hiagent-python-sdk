@@ -1367,3 +1367,34 @@ class ClearLongMemoryRequest(BaseSchema):
         description="user id",
         serialization_alias="UserID",
     )
+
+
+class AsyncResumeAppWorkflowRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    user_type: str = Field(
+        description="user type, App:openapi user;IAM:hiagent user;Visitor:web user;Lark:lark user;Wechat: wechat user",
+        serialization_alias="UserType",
+    )
+    run_id: str = Field(
+        description="run id",
+        serialization_alias="RunID",
+    )
+    input: str = Field(
+        description="input json str",
+        serialization_alias="Input",
+    )
+    debug: bool = Field(
+        description="debug mode, if true will not output fully node info, but faster",
+        serialization_alias="Debug",
+    )
+
+
+class AsyncResumeAppWorkflowResponse(SyncRunAppWorkflowResponse):
+    pass
