@@ -1209,3 +1209,22 @@ class EventTriggerWebhookResponse(BaseSchema):
         description="run id",
         validation_alias="runID",
     )
+
+
+class ChatContinueRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id:str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+    resp_data_standard:bool = Field(
+        description="is resp data standard or not",
+        serialization_alias="RespDataStandard",
+    )

@@ -66,7 +66,7 @@ from ..hiagent_api.chat_types import (
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
     GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
     SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
-    ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse,
+    ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
 )
 
 
@@ -206,9 +206,9 @@ class ChatService(Service, AppAPIMixin):
                 yield chat_event
 
     async def achat_again(
-            self, app_key: str, chat: ChatAgainRequest
+            self, app_key: str, chat_again: ChatAgainRequest
     ) -> AsyncGenerator[ChatEvent, None]:
-        params = chat.model_dump(by_alias=True)
+        params = chat_again.model_dump(by_alias=True)
         g = self._asse_post(app_key, "query_again_v2", params)
         async for event in g:
             event_data = json.loads(event.data)
@@ -555,6 +555,28 @@ class ChatService(Service, AppAPIMixin):
             ),
             by_alias=True,
         )
+
+    def chat_continue(
+            self, app_key: str, chat_continue: ChatContinueRequest
+    ) -> Generator[ChatEvent, None, None]:
+        params = chat_continue.model_dump(by_alias=True)
+        g = self._sse_post(app_key, "chat_continue", params)
+        for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_chat_event(event_data)
+            if chat_event:
+                yield chat_event
+
+    async def achat_continue(
+            self, app_key: str, chat_continue: ChatContinueRequest
+    ) -> AsyncGenerator[ChatEvent, None]:
+        params = chat_continue.model_dump(by_alias=True)
+        g = self._asse_post(app_key, "chat_continue", params)
+        async for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_chat_event(event_data)
+            if chat_event:
+                yield chat_event
 
 
 def parse_chat_event(event_data: dict) -> Optional[ChatEvent]:
