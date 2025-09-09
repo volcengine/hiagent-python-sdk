@@ -707,3 +707,30 @@ class GetConversationInputsResponse(BaseSchema):
         description="conversation inputs",
         validation_alias="Inputs",
     )
+
+
+class UpdateConversationRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    inputs: dict[str, str] = Field(
+        description="inputs of variables",
+        serialization_alias="Inputs",
+    )
+    app_conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="AppConversationID",
+    )
+    conversation_name: str = Field(
+        description="conversation name",
+        serialization_alias="ConversationName",
+    )
+
+
+class EmptyResponse(BaseSchema):
+    pass
