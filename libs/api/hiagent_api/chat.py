@@ -65,7 +65,7 @@ from ..hiagent_api.chat_types import (
     StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
     GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
-    SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse,
+    SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
 )
 
 
@@ -489,6 +489,26 @@ class ChatService(Service, AppAPIMixin):
             self, app_key: str, req: SyncRunAppWorkflowRequest
     ) -> SyncRunAppWorkflowResponse:
         return SyncRunAppWorkflowResponse.model_validate_json(
+            await self._apost(
+                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def query_run_app_process(
+            self, app_key: str, req: QueryRunAppProcessRequest
+    ) -> QueryRunAppProcessResponse:
+        return QueryRunAppProcessResponse.model_validate_json(
+            self._post(
+                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aquery_run_app_process(
+            self, app_key: str, req: QueryRunAppProcessRequest
+    ) -> QueryRunAppProcessResponse:
+        return QueryRunAppProcessResponse.model_validate_json(
             await self._apost(
                 app_key, "run_app_workflow", req.model_dump(by_alias=True)
             ),

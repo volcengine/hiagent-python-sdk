@@ -1134,3 +1134,21 @@ class SyncRunAppWorkflowResponse(BaseSchema):
         description="cost token",
         validation_alias="costToken",
     )
+
+
+class QueryRunAppProcessRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    run_id: str = Field(
+        description="run id",
+        serialization_alias="RunID",
+    )
+
+class QueryRunAppProcessResponse(SyncRunAppWorkflowResponse):
+    pass
