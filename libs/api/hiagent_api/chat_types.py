@@ -747,5 +747,24 @@ class DeleteConversationRequest(BaseSchema):
     )
 
 
+class StopMessageRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    task_id: str = Field(
+        description="task id",
+        serialization_alias="TaskID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+
+
 class EmptyResponse(BaseSchema):
     pass

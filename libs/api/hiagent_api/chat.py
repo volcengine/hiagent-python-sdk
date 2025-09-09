@@ -62,6 +62,7 @@ from ..hiagent_api.chat_types import (
     ToolMessageOutputStartChatEvent,
     ChatAgainRequest, GetConversationListRequest, GetConversationListResponse, GetConversationInputsRequest,
     GetConversationInputsResponse, UpdateConversationRequest, EmptyResponse, DeleteConversationRequest,
+    StopMessageRequest,
 )
 
 
@@ -290,6 +291,27 @@ class ChatService(Service, AppAPIMixin):
             ),
             by_alias=True,
         )
+
+    def stop_message(
+            self, app_key: str, req: StopMessageRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            self._post(
+                app_key, "stop_message", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def astop_message(
+            self, app_key: str, req: StopMessageRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            await self._apost(
+                app_key, "stop_message", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
 
 def parse_chat_event(event_data: dict) -> Optional[ChatEvent]:
     match event_data["event"]:
