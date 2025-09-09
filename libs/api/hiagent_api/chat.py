@@ -66,7 +66,7 @@ from ..hiagent_api.chat_types import (
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
     GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
     SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
-    ListOauth2TokenRequest, ListOauth2TokenResponse,
+    ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse,
 )
 
 
@@ -532,6 +532,26 @@ class ChatService(Service, AppAPIMixin):
         return ListOauth2TokenResponse.model_validate_json(
             await self._apost(
                 app_key, "list_oauth2_token", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def event_trigger_webhook(
+            self, app_key: str, webhook_key: str, webhook_token: str
+    ) -> EventTriggerWebhookResponse:
+        return EventTriggerWebhookResponse.model_validate_json(
+            self._post(
+                app_key, "/trigger/webhook?key={}".format(webhook_key), {}, {"Authorization": "Bearer {}".format(webhook_token)}
+            ),
+            by_alias=True,
+        )
+
+    async def aevent_trigger_webhook(
+            self, app_key: str, webhook_key: str, webhook_token: str
+    ) -> EventTriggerWebhookResponse:
+        return EventTriggerWebhookResponse.model_validate_json(
+            await self._apost(
+                app_key, "/trigger/webhook?key={}".format(webhook_key), {}, {"Authorization": "Bearer {}".format(webhook_token)}
             ),
             by_alias=True,
         )

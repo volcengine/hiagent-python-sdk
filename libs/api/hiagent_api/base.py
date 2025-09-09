@@ -67,11 +67,11 @@ class VolcAuth(AuthBase):
 
 class Service(object):
     def __init__(
-        self,
-        service_info: ServiceInfo,
-        api_info: dict[str, ApiInfo],
-        http_client: Optional[httpx.Client] = None,
-        async_http_client: Optional[httpx.AsyncClient] = None,
+            self,
+            service_info: ServiceInfo,
+            api_info: dict[str, ApiInfo],
+            http_client: Optional[httpx.Client] = None,
+            async_http_client: Optional[httpx.AsyncClient] = None,
     ):
         self.service_info = service_info
         self.api_info = api_info
@@ -79,9 +79,9 @@ class Service(object):
         self.init_http_client(http_client, async_http_client)
 
     def init_http_client(
-        self,
-        http_client: Optional[httpx.Client] = None,
-        async_http_client: Optional[httpx.AsyncClient] = None,
+            self,
+            http_client: Optional[httpx.Client] = None,
+            async_http_client: Optional[httpx.AsyncClient] = None,
     ):
         if http_client:
             self.http_client = http_client
@@ -361,9 +361,9 @@ class Service(object):
     def prepare_request(self, api_info, params, doseq=0):
         for key in params:
             if (
-                type(params[key]) == int
-                or type(params[key]) == float
-                or type(params[key]) == bool
+                    type(params[key]) == int
+                    or type(params[key]) == float
+                    or type(params[key]) == bool
             ):
                 params[key] = str(params[key])
             elif sys.version_info[0] != 3:
@@ -444,12 +444,12 @@ class Service(object):
         inner_token.signature = Util.to_hex(Util.hmac_sha256(key, sign_str))
 
         sts.session_token = (
-            "STS2"
-            + base64.b64encode(
-                json.dumps(inner_token, cls=ComplexEncoder, sort_keys=True)
-                .replace(" ", "")
-                .encode("utf-8")
-            ).decode()
+                "STS2"
+                + base64.b64encode(
+            json.dumps(inner_token, cls=ComplexEncoder, sort_keys=True)
+            .replace(" ", "")
+            .encode("utf-8")
+        ).decode()
         )
         return sts
 
@@ -459,14 +459,14 @@ class Service(object):
         pos = format_time.find("+")
         if pos == -1:
             pos = format_time.find("-")
-        return format_time[: pos + 3] + ":" + format_time[pos + 3 : pos + 5]
+        return format_time[: pos + 3] + ":" + format_time[pos + 3: pos + 5]
 
 
 class AppAPIMixin:
     def __init__(
-        self,
-        http_client: httpx.Client,
-        async_http_client: httpx.AsyncClient,
+            self,
+            http_client: httpx.Client,
+            async_http_client: httpx.AsyncClient,
     ) -> None:
         self.base_url = ""
         self.http_client = http_client
@@ -475,7 +475,7 @@ class AppAPIMixin:
     def set_app_base_url(self, base_url: str):
         self.base_url = base_url
 
-    async def _apost(self, app_key: str, action: str, params: dict) -> str:
+    async def _apost(self, app_key: str, action: str, params: dict, _headers: dict = None) -> str:
         if self.base_url == "":
             raise Exception(
                 "base_url not set, you should call set_app_base_url() first"
@@ -484,7 +484,8 @@ class AppAPIMixin:
         app_url = f"{self.base_url}/{action}"
 
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
-
+        if _headers is not None:
+            headers.update(_headers)
         response = await self.async_http_client.post(
             app_url, json=params, headers=headers
         )
@@ -497,15 +498,17 @@ class AppAPIMixin:
             raise Exception("empty response")
         return res_text
 
-    def _post(self, app_key: str, action: str, params: dict) -> str:
+    def _post(self, app_key: str, action: str, params: dict, _headers: dict = None) -> str:
         if self.base_url == "":
             raise Exception(
                 "base_url not set, you should call set_app_base_url() first"
             )
 
         app_url = f"{self.base_url}/{action}"
-
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        if _headers is not None:
+            headers.update(_headers)
+
         response = self.http_client.post(app_url, json=params, headers=headers)
         try:
             response.raise_for_status()  # Raise an exception for bad status codes
@@ -517,7 +520,7 @@ class AppAPIMixin:
         return res_text
 
     def _sse_post(
-        self, app_key: str, action: str, params: dict
+            self, app_key: str, action: str, params: dict
     ) -> Generator[ServerSentEvent, None, None]:
         if self.base_url == "":
             raise Exception(
@@ -529,17 +532,17 @@ class AppAPIMixin:
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
 
         with connect_sse(
-            self.http_client,
-            method="POST",
-            url=app_url,
-            json=params,
-            headers=headers,
+                self.http_client,
+                method="POST",
+                url=app_url,
+                json=params,
+                headers=headers,
         ) as event_source:
             for sse in event_source.iter_sse():
                 yield sse
 
     async def _asse_post(
-        self, app_key: str, action: str, params: dict
+            self, app_key: str, action: str, params: dict
     ) -> AsyncGenerator[ServerSentEvent, None]:
         if self.base_url == "":
             raise Exception(
@@ -551,11 +554,11 @@ class AppAPIMixin:
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
 
         async with aconnect_sse(
-            self.async_http_client,
-            method="POST",
-            url=app_url,
-            json=params,
-            headers=headers,
+                self.async_http_client,
+                method="POST",
+                url=app_url,
+                json=params,
+                headers=headers,
         ) as event_source:
             async for sse in event_source.aiter_sse():
                 yield sse

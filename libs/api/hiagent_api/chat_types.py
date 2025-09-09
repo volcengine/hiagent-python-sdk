@@ -1202,3 +1202,10 @@ class ListOauth2TokenResponse(BaseSchema):
         description="items",
         serialization_alias="Items",
     )
+
+
+class EventTriggerWebhookResponse(BaseSchema):
+    run_id: str = Field(
+        description="run id",
+        validation_alias="runID",
+    )
