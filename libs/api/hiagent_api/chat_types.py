@@ -995,3 +995,142 @@ class RunAppWorkflowResponse(BaseSchema):
         description="run id",
         validation_alias="runId",
     )
+
+
+class SyncRunAppWorkflowRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    input_data: str = Field(
+        description="input data",
+        serialization_alias="InputData",
+    )
+    no_debug: bool = Field(
+        description="no debug",
+        serialization_alias="NoDebug",
+    )
+
+
+class BizCode(BaseSchema):
+    code: str = Field(
+        description="biz code",
+        validation_alias="Code",
+    )
+    message: str = Field(
+        description="biz message",
+        validation_alias="Message",
+    )
+    data: dict[str, str] = Field(
+        description="biz data",
+        validation_alias="Data",
+    )
+
+
+class WorkflowLoopBlock(BaseSchema):
+    nodes: dict[str, "WorkflowNode"] = Field(
+        description="nodes",
+        validation_alias="nodes",
+    )
+    steps: list[str] = Field(
+        description="steps",
+        validation_alias="steps",
+    )
+    status: str = Field(
+        description="status",
+        validation_alias="status",
+    )
+
+
+class WorkflowNode(BaseSchema):
+    input: str = Field(
+        description="input data",
+        validation_alias="input",
+    )
+    output: str = Field(
+        description="output data",
+        validation_alias="output",
+    )
+    status: str = Field(
+        description="status",
+        validation_alias="status",
+    )
+    message: str = Field(
+        description="message",
+        validation_alias="message",
+    )
+    cost_ms: int = Field(
+        description="cost ms",
+        validation_alias="costMs",
+    )
+    cost_token: int = Field(
+        description="cost token",
+        validation_alias="costToken",
+    )
+    biz_code: BizCode = Field(
+        description="biz code",
+        validation_alias="BizCode",
+    )
+    node_type: str = Field(
+        description="node type",
+        validation_alias="nodeType",
+    )
+    loop_block: WorkflowLoopBlock = Field(
+        description="loop block",
+        validation_alias="loopBlock",
+    )
+
+
+class SyncRunAppWorkflowResponse(BaseSchema):
+    run_id: str = Field(
+        description="run id",
+        validation_alias="runId",
+    )
+    status: str = Field(
+        description="status",
+        validation_alias="status",
+    )
+    nodes: dict[str: WorkflowNode] = Field(
+        description="nodes",
+        validation_alias="nodes",
+    )
+    steps: list[str] = Field(
+        description="steps",
+        validation_alias="steps",
+    )
+    code: int = Field(
+        description="code",
+        validation_alias="code",
+    )
+    message: str = Field(
+        description="message",
+        validation_alias="message",
+    )
+    cost_ms: int = Field(
+        description="cost ms",
+        validation_alias="costMs",
+    )
+    output: str = Field(
+        description="output",
+        validation_alias="output",
+    )
+    last_interrupted_node_id: str = Field(
+        description="last interrupted node id",
+        validation_alias="lastInterruptedNodeId",
+    )
+    checkpoint_expire_timestamp: int = Field(
+        description="checkpoint expire timestamp",
+        validation_alias="checkpointExpireTimestamp",
+    )
+    msg: str = Field(
+        description="msg",
+        validation_alias="msg",
+    )
+    cost_token: int = Field(
+        description="cost token",
+        validation_alias="costToken",
+    )

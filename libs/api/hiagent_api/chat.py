@@ -65,6 +65,7 @@ from ..hiagent_api.chat_types import (
     StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
     GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
+    SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse,
 )
 
 
@@ -468,6 +469,26 @@ class ChatService(Service, AppAPIMixin):
             self, app_key: str, req: RunAppWorkflowRequest
     ) -> RunAppWorkflowResponse:
         return RunAppWorkflowResponse.model_validate_json(
+            await self._apost(
+                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def sync_run_app_workflow(
+            self, app_key: str, req: SyncRunAppWorkflowRequest
+    ) -> SyncRunAppWorkflowResponse:
+        return SyncRunAppWorkflowResponse.model_validate_json(
+            self._post(
+                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def async_run_app_workflow(
+            self, app_key: str, req: SyncRunAppWorkflowRequest
+    ) -> SyncRunAppWorkflowResponse:
+        return SyncRunAppWorkflowResponse.model_validate_json(
             await self._apost(
                 app_key, "run_app_workflow", req.model_dump(by_alias=True)
             ),
