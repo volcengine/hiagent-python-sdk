@@ -63,6 +63,7 @@ from ..hiagent_api.chat_types import (
     ChatAgainRequest, GetConversationListRequest, GetConversationListResponse, GetConversationInputsRequest,
     GetConversationInputsResponse, UpdateConversationRequest, EmptyResponse, DeleteConversationRequest,
     StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
+    GetMessageInfoRequest, GetMessageInfoResponse,
 )
 
 
@@ -348,6 +349,26 @@ class ChatService(Service, AppAPIMixin):
         return GetConversationMessageResponse.model_validate_json(
             await self._apost(
                 app_key, "get_conversation_messages", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def get_message_info(
+            self, app_key: str, req: GetMessageInfoRequest
+    ) -> GetMessageInfoResponse:
+        return GetMessageInfoResponse.model_validate_json(
+            self._post(
+                app_key, "get_message_info", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_message_info(
+            self, app_key: str, req: GetMessageInfoRequest
+    ) -> GetMessageInfoResponse:
+        return GetMessageInfoResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_message_info", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

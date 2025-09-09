@@ -872,3 +872,25 @@ class GetConversationMessageResponse(BaseSchema):
         description="messages",
         validation_alias="Messages",
     )
+
+
+class GetMessageInfoRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+
+
+class GetMessageInfoResponse(BaseSchema):
+    message_info: list[ChatMessageInfo] = Field(
+        description="message info",
+        validation_alias="MessageInfo",
+    )
