@@ -1027,6 +1027,17 @@ class DeleteMessageRequest(BaseSchema):
     )
 
 
+class FeedbackInfo(BaseSchema):
+    problem_categories: list[str] = Field(
+        description="problem categories",
+        serialization_alias="ProblemCategories",
+    )
+    problem_detail: Optional[str] = Field(
+        description="problem detail",
+        validation_alias="ProblemDetail",
+    )
+
+
 class FeedbackRequest(BaseSchema):
     app_key: str = Field(
         description="app key",
@@ -1043,6 +1054,10 @@ class FeedbackRequest(BaseSchema):
     like_type: int = Field(
         description="like type, -1:dislike;0:normal;1:like",
         serialization_alias="LikeType",
+    )
+    feedback_info: Optional[FeedbackInfo] = Field(
+        description="feedback info",
+        serialization_alias="FeedbackInfo",
     )
 
 
@@ -1813,7 +1828,6 @@ class NodeParameters(BaseSchema):
         description="description zh-hant",
         validation_alias="DescZhHant",
     )
-
 
 
 class TriggerConfig(BaseSchema):
