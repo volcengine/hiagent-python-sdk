@@ -70,6 +70,11 @@ from ..hiagent_api.chat_types import (
     ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
     ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse, SetConversationTopRequest,
     CancelConversationTopRequest, QueryAppSkillAsyncTaskRequest, QueryAppSkillAsyncTaskResponse,
+    SyncResumeAppWorkflowRequest, SyncResumeAppWorkflowResponse, WorkflowEvent, StreamingWorkflowEventType,
+    FlowStartWorkflowEvent, FlowEndWorkflowEvent, FlowErrorWorkflowEvent, ToolMessageOutputEndWorkflowEvent,
+    ToolMessageOutputStartWorkflowEvent, ToolMessageWorkflowEvent, FlowCostWorkflowEvent, FlowInterruptedWorkflowEvent,
+    MessageOutputStartWorkflowEvent, MessageOutputEndWorkflowEvent, MessageWorkflowEvent, GetAppUserVariablesRequest,
+    GetAppUserVariablesResponse,
 )
 
 
@@ -673,7 +678,7 @@ class ChatService(Service, AppAPIMixin):
             by_alias=True,
         )
 
-    async def aasync_resume_app_workflow(
+    async def a_async_resume_app_workflow(
             self, app_key: str, req: AsyncResumeAppWorkflowRequest
     ) -> AsyncResumeAppWorkflowResponse:
         return AsyncResumeAppWorkflowResponse.model_validate_json(
@@ -739,6 +744,66 @@ class ChatService(Service, AppAPIMixin):
         return QueryAppSkillAsyncTaskResponse.model_validate_json(
             await self._apost(
                 app_key, "query_skill_async_task", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def sync_resume_app_workflow_blocking(
+            self, app_key: str, req: SyncResumeAppWorkflowRequest
+    ) -> SyncResumeAppWorkflowResponse:
+        req.is_stream = False
+        res = self._post(app_key, "sync_resume_app_workflow", req.model_dump(by_alias=True))
+        return SyncResumeAppWorkflowResponse.model_validate_json(res, by_alias=True)
+
+    async def a_sync_resume_app_workflow_blocking(
+            self, app_key: str, req: SyncResumeAppWorkflowRequest
+    ) -> SyncResumeAppWorkflowResponse:
+        req.is_stream = False
+        res = await self._apost(
+            app_key, "sync_resume_app_workflow", req.model_dump(by_alias=True)
+        )
+        return SyncResumeAppWorkflowResponse.model_validate_json(res, by_alias=True)
+
+    def sync_resume_app_workflow_streaming(
+            self, app_key: str, req: SyncResumeAppWorkflowRequest
+    ) -> Generator[ChatEvent, None, None]:
+        req.is_stream = True
+        params = req.model_dump(by_alias=True)
+        g = self._sse_post(app_key, "sync_resume_app_workflow", params)
+        for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_workflow_event(event_data)
+            if chat_event:
+                yield chat_event
+
+    async def a_sync_resume_app_workflow_streaming(
+            self, app_key: str, req: SyncResumeAppWorkflowRequest
+    ) -> AsyncGenerator[ChatEvent, None]:
+        req.is_stream = True
+        params = req.model_dump(by_alias=True)
+        g = self._asse_post(app_key, "sync_resume_app_workflow", params)
+        async for event in g:
+            event_data = json.loads(event.data)
+            chat_event = parse_workflow_event(event_data)
+            if chat_event:
+                yield chat_event
+
+    def get_app_user_variables(
+            self, app_key: str, req: GetAppUserVariablesRequest
+    ) -> GetAppUserVariablesResponse:
+        return GetAppUserVariablesResponse.model_validate_json(
+            self._post(
+                app_key, "get_app_user_variables", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_app_user_variables(
+            self, app_key: str, req: GetAppUserVariablesRequest
+    ) -> GetAppUserVariablesResponse:
+        return GetAppUserVariablesResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_app_user_variables", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
@@ -810,5 +875,33 @@ def parse_chat_event(event_data: dict) -> Optional[ChatEvent]:
             return ThinkMessageOutputEndChatEvent.model_validate(event_data)
         case StreamingChatEventType.think_message:
             return ThinkMessageChatEvent.model_validate(event_data)
+
+    return None
+
+
+def parse_workflow_event(event_data: dict) -> Optional[WorkflowEvent]:
+    match event_data["event"]:
+        case StreamingWorkflowEventType.flow_start:
+            return FlowStartWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.flow_interrupted:
+            return FlowInterruptedWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.flow_end:
+            return FlowEndWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.flow_cost:
+            return FlowCostWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.flow_error:
+            return FlowErrorWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.tool_message_output_start:
+            return ToolMessageOutputStartWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.tool_message:
+            return ToolMessageWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.tool_message_output_end:
+            return ToolMessageOutputEndWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.message_output_start:
+            return MessageOutputStartWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.message_output_end:
+            return MessageOutputEndWorkflowEvent.model_validate(event_data)
+        case StreamingWorkflowEventType.message:
+            return MessageWorkflowEvent.model_validate(event_data)
 
     return None

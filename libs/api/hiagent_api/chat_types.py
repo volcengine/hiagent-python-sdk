@@ -233,6 +233,118 @@ class BlockingChatResponse(BaseSchema):
     )
 
 
+class StreamingWorkflowEventType(StrEnum):
+    tool_message_output_start = "tool_message_output_start"
+    tool_message = "tool_message"
+    tool_message_output_end = "tool_message_output_end"
+    message_output_start = "message_output_start"
+    message = "message"
+    message_output_end = "message_output_end"
+    flow_interrupted = "flow_interrupted"
+    flow_start = "flow_start"
+    flow_cost = "flow_cost"
+    flow_end = "flow_end"
+    flow_error = "flow_error"
+
+
+class WorkflowEvent(BaseSchema):
+    event: str = Field(
+        description="event",
+    )
+    task_id: str = Field(
+        description="task id",
+    )
+    id: str = Field(
+        description="id",
+    )
+    run_id: str = Field(
+        description="run id",
+    )
+
+
+class FlowStartWorkflowEvent(WorkflowEvent):
+    pass
+
+
+class ToolMessageOutputStartWorkflowEvent(WorkflowEvent):
+    message_title: str = Field(
+        description="message title",
+    )
+
+
+class ToolMessageWorkflowEvent(WorkflowEvent):
+    answer: str = Field(
+        description="answer",
+    )
+    message_title: str = Field(
+        description="message title",
+    )
+    created_at: int = Field(
+        description="created at",
+    )
+
+
+class ToolMessageOutputEndWorkflowEvent(WorkflowEvent):
+    message_title: str = Field(
+        description="message title",
+    )
+
+
+class FlowInterruptedWorkflowEvent(WorkflowEvent):
+    interrupted_msg: str = Field(
+        description="interrupted message",
+    )
+    interrupted_node_id: str = Field(
+        description="interrupted node id",
+    )
+    interrupted_type: str = Field(
+        description="interrupted type",
+    )
+
+
+class MessageOutputStartWorkflowEvent(WorkflowEvent):
+    think_message_id: str = Field(
+        description="think message id",
+    )
+
+
+class MessageWorkflowEvent(WorkflowEvent):
+    think_message_id: str = Field(
+        description="think message id",
+    )
+    answer: str = Field(
+        description="answer",
+    )
+    created_at: int = Field(
+        description="created at",
+    )
+
+
+class MessageOutputEndWorkflowEvent(WorkflowEvent):
+    think_message_id: str = Field(
+        description="think message id",
+    )
+
+
+class FlowCostWorkflowEvent(WorkflowEvent):
+    cost_tokens: int = Field(
+        description="cost tokens",
+    )
+    latency: int = Field(
+        description="latency",
+    )
+
+
+class FlowEndWorkflowEvent(WorkflowEvent):
+    pass
+
+
+class FlowErrorWorkflowEvent(WorkflowEvent):
+    error_message: str = Field(
+        description="error message",
+    )
+
+
 class StreamingChatEventType(StrEnum):
     message_start = "message_start"
     agent_jump = "agent_jump"
@@ -1476,4 +1588,88 @@ class QueryAppSkillAsyncTaskResponse(BaseSchema):
     infos: list[AppSkillAsyncTaskInfo] = Field(
         description="infos",
         validation_alias="Infos",
+    )
+
+
+class SyncResumeAppWorkflowRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    user_type: Optional[str] = Field(
+        description="user type, App:openapi user;IAM:hiagent user;Visitor:web user;Lark:lark user;Wechat: wechat user",
+        serialization_alias="UserType",
+    )
+    run_id: str = Field(
+        description="run id",
+        serialization_alias="RunID",
+    )
+    input: Optional[str] = Field(
+        description="input json str",
+        serialization_alias="Input",
+    )
+    debug: Optional[bool] = Field(
+        description="debug mode, if true will not output fully node info, but faster",
+        serialization_alias="Debug",
+    )
+    is_stream: Optional[bool] = Field(
+        description="is stream or not",
+        serialization_alias="IsStream",
+    )
+
+
+class SyncResumeAppWorkflowResponse(SyncRunAppWorkflowResponse):
+    pass
+
+
+class GetAppUserVariablesRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="ConversationID",
+    )
+
+
+class UserVariables(BaseSchema):
+    name: str = Field(
+        description="user variable name",
+        validation_alias="Name",
+    )
+    description: str = Field(
+        description="user variable description",
+        validation_alias="Description",
+    )
+    scope: str = Field(
+        description="user variable scope: Agent,Conversation",
+        validation_alias="Scope",
+    )
+    value: str = Field(
+        description="user variable value",
+        validation_alias="Value",
+    )
+    default: str = Field(
+        description="default value",
+        validation_alias="Default",
+    )
+    update_time: str = Field(
+        description="update time",
+        validation_alias="UpdateTime",
+    )
+
+
+class GetAppUserVariablesResponse(BaseSchema):
+    user_variables: list[UserVariables] = Field(
+        description="user variables",
+        validation_alias="UserVariables",
     )
