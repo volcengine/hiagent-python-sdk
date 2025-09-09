@@ -68,7 +68,7 @@ from ..hiagent_api.chat_types import (
     SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
     ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
     ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
-    ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse,
+    ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse, SetConversationTopRequest,
 )
 
 
@@ -678,6 +678,26 @@ class ChatService(Service, AppAPIMixin):
         return AsyncResumeAppWorkflowResponse.model_validate_json(
             await self._apost(
                 app_key, "async_resume_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def set_conversation_top(
+            self, app_key: str, req: SetConversationTopRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            self._post(
+                app_key, "set_conversation_top", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aset_conversation_top(
+            self, app_key: str, req: SetConversationTopRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            await self._apost(
+                app_key, "set_conversation_top", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
