@@ -969,3 +969,29 @@ class GetSuggestedQuestionsResponse(BaseSchema):
         description="suggested questions",
         validation_alias="SuggestedQuestions",
     )
+
+
+class RunAppWorkflowRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    input_data: str = Field(
+        description="input data",
+        serialization_alias="InputData",
+    )
+    no_debug: bool = Field(
+        description="no debug",
+        serialization_alias="NoDebug",
+    )
+
+
+class RunAppWorkflowResponse(BaseSchema):
+    run_id: str = Field(
+        description="run id",
+        validation_alias="runId",
+    )
