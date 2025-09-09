@@ -74,7 +74,7 @@ from ..hiagent_api.chat_types import (
     FlowStartWorkflowEvent, FlowEndWorkflowEvent, FlowErrorWorkflowEvent, ToolMessageOutputEndWorkflowEvent,
     ToolMessageOutputStartWorkflowEvent, ToolMessageWorkflowEvent, FlowCostWorkflowEvent, FlowInterruptedWorkflowEvent,
     MessageOutputStartWorkflowEvent, MessageOutputEndWorkflowEvent, MessageWorkflowEvent, GetAppUserVariablesRequest,
-    GetAppUserVariablesResponse,
+    GetAppUserVariablesResponse, SetAppUserVariablesRequest,
 )
 
 
@@ -804,6 +804,26 @@ class ChatService(Service, AppAPIMixin):
         return GetAppUserVariablesResponse.model_validate_json(
             await self._apost(
                 app_key, "get_app_user_variables", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def set_app_user_variables(
+            self, app_key: str, req: SetAppUserVariablesRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            self._post(
+                app_key, "set_app_user_variables", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aset_app_user_variables(
+            self, app_key: str, req: SetAppUserVariablesRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            await self._apost(
+                app_key, "set_app_user_variables", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

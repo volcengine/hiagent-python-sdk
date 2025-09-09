@@ -1645,26 +1645,32 @@ class UserVariables(BaseSchema):
     name: str = Field(
         description="user variable name",
         validation_alias="Name",
+        serialization_alias="Name",
     )
     description: str = Field(
         description="user variable description",
         validation_alias="Description",
+        serialization_alias="Description",
     )
     scope: str = Field(
         description="user variable scope: Agent,Conversation",
         validation_alias="Scope",
+        serialization_alias="Scope",
     )
     value: str = Field(
         description="user variable value",
         validation_alias="Value",
+        serialization_alias="Value",
     )
     default: str = Field(
         description="default value",
         validation_alias="Default",
+        serialization_alias="Default",
     )
     update_time: str = Field(
         description="update time",
         validation_alias="UpdateTime",
+        serialization_alias="UpdateTime",
     )
 
 
@@ -1672,4 +1678,23 @@ class GetAppUserVariablesResponse(BaseSchema):
     user_variables: list[UserVariables] = Field(
         description="user variables",
         validation_alias="UserVariables",
+    )
+
+
+class SetAppUserVariablesRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="ConversationID",
+    )
+    user_variables: list[UserVariables] = Field(
+        description="user variables",
+        serialization_alias="UserVariables",
     )
