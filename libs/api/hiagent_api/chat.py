@@ -66,6 +66,7 @@ from ..hiagent_api.chat_types import (
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
     GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
     SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
+    ListOauth2TokenRequest, ListOauth2TokenResponse,
 )
 
 
@@ -511,6 +512,26 @@ class ChatService(Service, AppAPIMixin):
         return QueryRunAppProcessResponse.model_validate_json(
             await self._apost(
                 app_key, "run_app_workflow", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def list_oauth2_token(
+            self, app_key: str, req: ListOauth2TokenRequest
+    ) -> ListOauth2TokenResponse:
+        return ListOauth2TokenResponse.model_validate_json(
+            self._post(
+                app_key, "list_oauth2_token", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def alist_oauth2_token(
+            self, app_key: str, req: ListOauth2TokenRequest
+    ) -> ListOauth2TokenResponse:
+        return ListOauth2TokenResponse.model_validate_json(
+            await self._apost(
+                app_key, "list_oauth2_token", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

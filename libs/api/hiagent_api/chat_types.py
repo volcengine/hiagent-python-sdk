@@ -1150,5 +1150,55 @@ class QueryRunAppProcessRequest(BaseSchema):
         serialization_alias="RunID",
     )
 
+
 class QueryRunAppProcessResponse(SyncRunAppWorkflowResponse):
     pass
+
+
+class Oauth2TokenItem(BaseSchema):
+    plugin_id: str = Field(
+        description="plugin id",
+        serialization_alias="PluginID",
+    )
+    app_id: str = Field(
+        description="app id",
+        serialization_alias="APPID",
+    )
+    app_user_id: str = Field(
+        description="app user id",
+        serialization_alias="APPUserID",
+    )
+    token_expires_at: Optional[str] = Field(
+        description="token expires at",
+        serialization_alias="TokenExpiresAt",
+    )
+    is_token_valid: bool = Field(
+        description="is token valid",
+        serialization_alias="IsTokenValid",
+    )
+    is_refresh_token_valid: bool = Field(
+        description="is refresh token valid",
+        serialization_alias="IsRefreshTokenValid",
+    )
+
+
+class ListOauth2TokenRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+
+
+class ListOauth2TokenResponse(BaseSchema):
+    total: int = Field(
+        description="total",
+        serialization_alias="Total",
+    )
+    items: list[Oauth2TokenItem] = Field(
+        description="items",
+        serialization_alias="Items",
+    )
