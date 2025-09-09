@@ -69,6 +69,7 @@ from ..hiagent_api.chat_types import (
     ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
     ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
     ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse, SetConversationTopRequest,
+    CancelConversationTopRequest,
 )
 
 
@@ -698,6 +699,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "set_conversation_top", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def cancel_conversation_top(
+            self, app_key: str, req: CancelConversationTopRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            self._post(
+                app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def acancel_conversation_top(
+            self, app_key: str, req: CancelConversationTopRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            await self._apost(
+                app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
