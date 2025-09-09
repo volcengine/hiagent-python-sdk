@@ -894,3 +894,22 @@ class GetMessageInfoResponse(BaseSchema):
         description="message info",
         validation_alias="MessageInfo",
     )
+
+
+class DeleteMessageRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+    query_id: str = Field(
+        description="query id",
+        serialization_alias="QueryID",
+    )
