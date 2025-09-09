@@ -172,6 +172,7 @@ class QueryExtendsInfo(BaseSchema):
     files: list[FileInfo] = Field(
         description="files",
         serialization_alias="Files",
+        validation_alias="Files",
     )
 
 
@@ -783,3 +784,91 @@ class ClearMessageRequest(BaseSchema):
 
 class EmptyResponse(BaseSchema):
     pass
+
+
+class GetConversationMessageRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    app_conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="AppConversationID",
+    )
+    limit: int = Field(
+        description="limit",
+        serialization_alias="Limit",
+    )
+
+
+class MessageAnswerInfo(BaseSchema):
+    answer: str = Field(
+        description="answer",
+        validation_alias="Answer",
+    )
+    message_id: str = Field(
+        description="message id",
+        validation_alias="MessageID",
+    )
+    create_time: int = Field(
+        description="create time",
+        validation_alias="CreateTime",
+    )
+    task_id: str = Field(
+        description="task id",
+        validation_alias="TaskID",
+    )
+    like: int = Field(
+        description="like, -1:dislike;0:normal;1:like",
+        validation_alias="Like",
+    )
+    total_tokens: int = Field(
+        description="total tokens",
+        validation_alias="TotalTokens",
+    )
+    latency: float = Field(
+        description="latency",
+        validation_alias="Latency",
+    )
+    tracing_json_str: str = Field(
+        description="tracing json str",
+        validation_alias="TracingJsonStr",
+    )
+
+
+class ChatMessageInfo(BaseSchema):
+    conversation_id: str = Field(
+        description="conversation id",
+        validation_alias="ConversationID",
+    )
+    query_id: str = Field(
+        description="query id",
+        validation_alias="QueryID",
+    )
+    query: str = Field(
+        description="query",
+        validation_alias="Query",
+    )
+    answer_info: MessageAnswerInfo = Field(
+        description="answer info",
+        validation_alias="AnswerInfo",
+    )
+    other_answers: list[MessageAnswerInfo] = Field(
+        description="other answers",
+        validation_alias="OtherAnswers",
+    )
+    query_extends: QueryExtendsInfo = Field(
+        description="query extends",
+        validation_alias="QueryExtends",
+    )
+
+
+class GetConversationMessageResponse(BaseSchema):
+    messages: list[ChatMessageInfo] = Field(
+        description="messages",
+        validation_alias="Messages",
+    )

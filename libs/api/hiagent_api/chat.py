@@ -62,7 +62,7 @@ from ..hiagent_api.chat_types import (
     ToolMessageOutputStartChatEvent,
     ChatAgainRequest, GetConversationListRequest, GetConversationListResponse, GetConversationInputsRequest,
     GetConversationInputsResponse, UpdateConversationRequest, EmptyResponse, DeleteConversationRequest,
-    StopMessageRequest, ClearMessageRequest,
+    StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
 )
 
 
@@ -328,6 +328,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "clear_message", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def get_conversation_messages(
+            self, app_key: str, req: GetConversationMessageRequest
+    ) -> GetConversationMessageResponse:
+        return GetConversationMessageResponse.model_validate_json(
+            self._post(
+                app_key, "get_conversation_messages", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_conversation_messages(
+            self, app_key: str, req: GetConversationMessageRequest
+    ) -> GetConversationMessageResponse:
+        return GetConversationMessageResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_conversation_messages", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
