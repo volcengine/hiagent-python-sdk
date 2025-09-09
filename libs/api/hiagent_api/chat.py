@@ -19,8 +19,8 @@ from volcengine.ApiInfo import ApiInfo
 from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
-from ..hiagent_api.base import AppAPIMixin, Service
-from ..hiagent_api.chat_types import (
+from hiagent_api.base import AppAPIMixin, Service
+from hiagent_api.chat_types import (
     AgentIntentionChatEvent,
     AgentJumpChatEvent,
     AgentTakeOverChatEvent,
@@ -550,7 +550,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> EventTriggerWebhookResponse:
         return EventTriggerWebhookResponse.model_validate_json(
             self._post(
-                app_key, "/trigger/webhook?key={}".format(webhook_key), {},
+                app_key, "trigger/webhook?key={}".format(webhook_key), {},
                 {"Authorization": "Bearer {}".format(webhook_token)}
             ),
             by_alias=True,
@@ -561,7 +561,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> EventTriggerWebhookResponse:
         return EventTriggerWebhookResponse.model_validate_json(
             await self._apost(
-                app_key, "/trigger/webhook?key={}".format(webhook_key), {},
+                app_key, "trigger/webhook?key={}".format(webhook_key), {},
                 {"Authorization": "Bearer {}".format(webhook_token)}
             ),
             by_alias=True,

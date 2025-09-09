@@ -16,7 +16,7 @@ from typing import Optional
 from pydantic import Field
 from strenum import StrEnum
 
-from ..hiagent_api.base import BaseSchema
+from hiagent_api.base import BaseSchema
 
 
 class CreateConversationRequest(BaseSchema):
