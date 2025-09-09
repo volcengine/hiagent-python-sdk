@@ -64,6 +64,7 @@ from ..hiagent_api.chat_types import (
     GetConversationInputsResponse, UpdateConversationRequest, EmptyResponse, DeleteConversationRequest,
     StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
     GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
+    GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse,
 )
 
 
@@ -429,6 +430,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "set_message_answer_used", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def get_suggested_questions(
+            self, app_key: str, req: GetSuggestedQuestionsRequest
+    ) -> GetSuggestedQuestionsResponse:
+        return GetSuggestedQuestionsResponse.model_validate_json(
+            self._post(
+                app_key, "get_suggested_questions", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_suggested_questions(
+            self, app_key: str, req: GetSuggestedQuestionsRequest
+    ) -> GetSuggestedQuestionsResponse:
+        return GetSuggestedQuestionsResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_suggested_questions", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

@@ -947,3 +947,25 @@ class SetMessageAnswerUsedRequest(BaseSchema):
         description="message id",
         serialization_alias="MessageID",
     )
+
+
+class GetSuggestedQuestionsRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+
+
+class GetSuggestedQuestionsResponse(BaseSchema):
+    suggested_questions: list[str] = Field(
+        description="suggested questions",
+        validation_alias="SuggestedQuestions",
+    )
