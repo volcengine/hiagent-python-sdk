@@ -1295,7 +1295,7 @@ class LongMemoryItem(BaseSchema):
         description="long memory id",
         validation_alias="MemoryID",
     )
-    memory:str = Field(
+    memory: str = Field(
         description="long memory",
         validation_alias="Memory",
     )
@@ -1342,3 +1342,17 @@ class UpdateLongMemoryRequest(BaseSchema):
         serialization_alias="Memory",
     )
 
+
+class DeleteLongMemoryRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    memory_ids: list[str] = Field(
+        description="long memory ids",
+        serialization_alias="MemoryIDs",
+    )
