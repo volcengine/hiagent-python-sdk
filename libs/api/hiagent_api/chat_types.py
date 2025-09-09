@@ -913,3 +913,22 @@ class DeleteMessageRequest(BaseSchema):
         description="query id",
         serialization_alias="QueryID",
     )
+
+
+class FeedbackRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+    like_type: int = Field(
+        description="like type, -1:dislike;0:normal;1:like",
+        serialization_alias="LikeType",
+    )
