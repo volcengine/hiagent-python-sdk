@@ -74,7 +74,8 @@ from ..hiagent_api.chat_types import (
     FlowStartWorkflowEvent, FlowEndWorkflowEvent, FlowErrorWorkflowEvent, ToolMessageOutputEndWorkflowEvent,
     ToolMessageOutputStartWorkflowEvent, ToolMessageWorkflowEvent, FlowCostWorkflowEvent, FlowInterruptedWorkflowEvent,
     MessageOutputStartWorkflowEvent, MessageOutputEndWorkflowEvent, MessageWorkflowEvent, GetAppUserVariablesRequest,
-    GetAppUserVariablesResponse, SetAppUserVariablesRequest,
+    GetAppUserVariablesResponse, SetAppUserVariablesRequest, QueryTriggerRunRecordsRequest,
+    QueryTriggerRunRecordsResponse,
 )
 
 
@@ -824,6 +825,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "set_app_user_variables", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def query_trigger_run_records(
+            self, app_key: str, req: QueryTriggerRunRecordsRequest
+    ) -> QueryTriggerRunRecordsResponse:
+        return QueryTriggerRunRecordsResponse.model_validate_json(
+            self._post(
+                app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aquery_trigger_run_records(
+            self, app_key: str, req: QueryTriggerRunRecordsRequest
+    ) -> QueryTriggerRunRecordsResponse:
+        return QueryTriggerRunRecordsResponse.model_validate_json(
+            await self._apost(
+                app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

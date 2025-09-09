@@ -1698,3 +1698,216 @@ class SetAppUserVariablesRequest(BaseSchema):
         description="user variables",
         serialization_alias="UserVariables",
     )
+
+
+class QueryTriggerRunRecordsRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    run_ids: list[str] = Field(
+        description="run ids",
+        serialization_alias="RunIDs",
+    )
+    page: int = Field(
+        description="page number",
+        serialization_alias="Page",
+    )
+    size: int = Field(
+        description="page size",
+        serialization_alias="Size",
+    )
+
+
+class TriggerPromptConfig(BaseSchema):
+    content: str = Field(
+        description="content",
+        validation_alias="Content",
+    )
+    inputs: dict[str, str] = Field(
+        description="inputs",
+        validation_alias="Inputs",
+    )
+
+
+class TriggerToolConfig(BaseSchema):
+    tool_id: str = Field(
+        description="tool id",
+        validation_alias="ToolID",
+    )
+    input_data: str = Field(
+        description="input data json str",
+        validation_alias="InputData",
+    )
+    input_data_schema: str = Field(
+        description="input data schema",
+        validation_alias="InputDataSchema",
+    )
+
+
+class TriggerWorkflowConfig(BaseSchema):
+    workflow_id: str = Field(
+        description="workflow id",
+        validation_alias="WorkflowID",
+    )
+    input_data: str = Field(
+        description="input data json str",
+        validation_alias="InputData",
+    )
+    input_data_schema: str = Field(
+        description="input data schema",
+        validation_alias="InputDataSchema",
+    )
+
+
+class NodeParameters(BaseSchema):
+    name: str = Field(
+        description="node parameter name",
+        validation_alias="Name",
+    )
+    desc: str = Field(
+        description="node parameter description",
+        validation_alias="Desc",
+    )
+    required: bool = Field(
+        description="node parameter required",
+        validation_alias="Required",
+    )
+    type: str = Field(
+        description="node parameter type:-1:Unknown;0:String;1Integer;2:Boolean;3:Number;4:Object;5:ArrayOfString;6:ArrayOfInteger;7:ArrayOfBoolean;8:ArrayOfNumber;9:ArrayOfObject;10:File;11:ArrayOfFile",
+        validation_alias="Type",
+    )
+    sub_parameters: list["NodeParameters"] = Field(
+        description="sub parameters",
+        validation_alias="SubParameters",
+    )
+    default: str = Field(
+        description="default value",
+        validation_alias="Default",
+    )
+    is_secret: bool = Field(
+        description="is secret",
+        validation_alias="IsSecret",
+    )
+    is_visible: Optional[bool] = Field(
+        description="is visible",
+        validation_alias="IsVisible",
+    )
+    file_category: Optional[str] = Field(
+        description="file category: Doc,Txt,Image,Audio,Video,Compressed",
+        validation_alias="FileCategory",
+    )
+    desc_en: str = Field(
+        description="description en",
+        validation_alias="DescEn",
+    )
+    desc_zh_hans: str = Field(
+        description="description zh",
+        validation_alias="DescZhHans",
+    )
+    desc_zh_hant: str = Field(
+        description="description zh-hant",
+        validation_alias="DescZhHant",
+    )
+
+
+
+class TriggerConfig(BaseSchema):
+    name: str = Field(
+        description="trigger name",
+        validation_alias="Name",
+    )
+    trigger_type: str = Field(
+        description="trigger type: Cron,Event",
+        validation_alias="Type",
+    )
+    cron_expr: Optional[str] = Field(
+        description="cron expr",
+        validation_alias="CronExpr",
+    )
+    show_cron_expr: bool = Field(
+        description="show cron expr",
+        validation_alias="ShowCronExpr",
+    )
+    task_type: str = Field(
+        description="task type: Prompt,Plugin,Workflow",
+        validation_alias="TaskType",
+    )
+    prompt_config: Optional[TriggerPromptConfig] = Field(
+        description="prompt config",
+        validation_alias="PromptConfig",
+    )
+    tool_config: Optional[TriggerToolConfig] = Field(
+        description="tool config",
+        validation_alias="ToolConfig",
+    )
+    workflow_config: Optional[TriggerWorkflowConfig] = Field(
+        description="workflow config",
+        validation_alias="WorkflowConfig",
+    )
+    webhook_key: Optional[str] = Field(
+        description="webhook key",
+        validation_alias="WebhookKey",
+    )
+    bearer_token: Optional[str] = Field(
+        description="bearer token",
+        validation_alias="BearerToken",
+    )
+    request_parameter_schema: list[NodeParameters] = Field(
+        description="request parameters schema",
+        validation_alias="RequestParameterSchema",
+    )
+
+
+class TriggerRunRecord(BaseSchema):
+    run_id: str = Field(
+        description="run id",
+        validation_alias="RunID",
+    )
+    name: str = Field(
+        description="trigger name",
+        validation_alias="Name",
+    )
+    trigger_config: Optional[TriggerConfig] = Field(
+        description="trigger config",
+        validation_alias="TriggerConfig",
+    )
+    scene: str = Field(
+        description="trigger scene: debug,production",
+        validation_alias="Scene",
+    )
+    query: Optional[str] = Field(
+        description="query string",
+        validation_alias="Query",
+    )
+    answer: Optional[str] = Field(
+        description="answer string",
+        validation_alias="Answer",
+    )
+    user_id: Optional[str] = Field(
+        description="user id",
+        validation_alias="UserID",
+    )
+    status: str = Field(
+        description="run status: running,succeed,failed",
+        validation_alias="Status",
+    )
+    reason: Optional[str] = Field(
+        description="reason string",
+        validation_alias="Reason",
+    )
+
+
+class QueryTriggerRunRecordsResponse(BaseSchema):
+    total: int = Field(
+        description="total number",
+        validation_alias="total",
+    )
+    records: list[TriggerRunRecord] = Field(
+        description="trigger records",
+        validation_alias="records",
+    )
