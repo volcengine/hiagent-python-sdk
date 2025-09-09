@@ -1323,3 +1323,22 @@ class ListLongMemoryResponse(BaseSchema):
         validation_alias="Items",
     )
 
+
+class UpdateLongMemoryRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    memory_id: str = Field(
+        description="long memory id",
+        serialization_alias="MemoryID",
+    )
+    memory: str = Field(
+        description="long memory",
+        serialization_alias="Memory",
+    )
+
