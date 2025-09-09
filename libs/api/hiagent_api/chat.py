@@ -68,6 +68,7 @@ from ..hiagent_api.chat_types import (
     SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
     ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
     ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
+    ClearLongMemoryRequest,
 )
 
 
@@ -637,6 +638,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "delete_long_memory", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def clear_long_memory(
+            self, app_key: str, req: ClearLongMemoryRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            self._post(
+                app_key, "clear_long_memory", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aclear_long_memory(
+            self, app_key: str, req: ClearLongMemoryRequest
+    ) -> EmptyResponse:
+        return EmptyResponse.model_validate_json(
+            await self._apost(
+                app_key, "clear_long_memory", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

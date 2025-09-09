@@ -1356,3 +1356,14 @@ class DeleteLongMemoryRequest(BaseSchema):
         description="long memory ids",
         serialization_alias="MemoryIDs",
     )
+
+
+class ClearLongMemoryRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
