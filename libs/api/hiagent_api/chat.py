@@ -69,7 +69,7 @@ from ..hiagent_api.chat_types import (
     ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
     ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
     ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse, SetConversationTopRequest,
-    CancelConversationTopRequest,
+    CancelConversationTopRequest, QueryAppSkillAsyncTaskRequest, QueryAppSkillAsyncTaskResponse,
 )
 
 
@@ -719,6 +719,26 @@ class ChatService(Service, AppAPIMixin):
         return EmptyResponse.model_validate_json(
             await self._apost(
                 app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def query_skill_async_task(
+            self, app_key: str, req: QueryAppSkillAsyncTaskRequest
+    ) -> QueryAppSkillAsyncTaskResponse:
+        return QueryAppSkillAsyncTaskResponse.model_validate_json(
+            self._post(
+                app_key, "query_skill_async_task", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aquery_skill_async_task(
+            self, app_key: str, req: QueryAppSkillAsyncTaskRequest
+    ) -> QueryAppSkillAsyncTaskResponse:
+        return QueryAppSkillAsyncTaskResponse.model_validate_json(
+            await self._apost(
+                app_key, "query_skill_async_task", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )

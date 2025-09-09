@@ -1414,6 +1414,7 @@ class SetConversationTopRequest(BaseSchema):
         serialization_alias="AppConversationID",
     )
 
+
 class CancelConversationTopRequest(BaseSchema):
     app_key: str = Field(
         description="app key",
@@ -1426,4 +1427,53 @@ class CancelConversationTopRequest(BaseSchema):
     app_conversation_id: str = Field(
         description="app conversation id",
         serialization_alias="AppConversationID",
+    )
+
+
+class QueryAppSkillAsyncTaskRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    app_conversation_id: str = Field(
+        description="app conversation id",
+        serialization_alias="AppConversationID",
+    )
+    task_ids: list[str] = Field(
+        description="task ids",
+        serialization_alias="TaskIDs",
+    )
+
+
+class AppSkillAsyncTaskInfo(BaseSchema):
+    task_id: str = Field(
+        description="task id",
+        validation_alias="TaskID",
+    )
+    status: str = Field(
+        description="status: PROCESSING,SUCCEED,FAILED,INVALID",
+        validation_alias="Status",
+    )
+    origin_message_id: str = Field(
+        description="origin message id",
+        validation_alias="OriginMessageID",
+    )
+    reason: str = Field(
+        description="reason",
+        validation_alias="Reason",
+    )
+    message_id: str = Field(
+        description="message id",
+        validation_alias="MessageID",
+    )
+
+
+class QueryAppSkillAsyncTaskResponse(BaseSchema):
+    infos: list[AppSkillAsyncTaskInfo] = Field(
+        description="infos",
+        validation_alias="Infos",
     )
