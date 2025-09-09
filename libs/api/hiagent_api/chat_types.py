@@ -1034,7 +1034,7 @@ class FeedbackInfo(BaseSchema):
     )
     problem_detail: Optional[str] = Field(
         description="problem detail",
-        validation_alias="ProblemDetail",
+        serialization_alias="ProblemDetail",
     )
 
 
