@@ -490,7 +490,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> SyncRunAppWorkflowResponse:
         return SyncRunAppWorkflowResponse.model_validate_json(
             self._post(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+                app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
@@ -500,7 +500,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> SyncRunAppWorkflowResponse:
         return SyncRunAppWorkflowResponse.model_validate_json(
             await self._apost(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+                app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
@@ -510,7 +510,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> QueryRunAppProcessResponse:
         return QueryRunAppProcessResponse.model_validate_json(
             self._post(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+                app_key, "query_run_app_process", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
@@ -520,7 +520,7 @@ class ChatService(Service, AppAPIMixin):
     ) -> QueryRunAppProcessResponse:
         return QueryRunAppProcessResponse.model_validate_json(
             await self._apost(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
+                app_key, "query_run_app_process", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
