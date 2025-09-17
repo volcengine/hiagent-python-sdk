@@ -1221,7 +1221,7 @@ class SyncRunAppWorkflowResponse(BaseSchema):
         description="status",
         validation_alias="status",
     )
-    nodes: dict[str: WorkflowNode] = Field(
+    nodes: dict[str, WorkflowNode] = Field(
         description="nodes",
         validation_alias="nodes",
     )

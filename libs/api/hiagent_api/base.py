@@ -475,7 +475,7 @@ class AppAPIMixin:
     def set_app_base_url(self, base_url: str):
         self.base_url = base_url
 
-    async def _apost(self, app_key: str, action: str, params: dict, _headers: Optional[dict]) -> str:
+    async def _apost(self, app_key: str, action: str, params: dict, _headers: Optional[dict] = None) -> str:
         if self.base_url == "":
             raise Exception(
                 "base_url not set, you should call set_app_base_url() first"
@@ -498,7 +498,7 @@ class AppAPIMixin:
             raise Exception("empty response")
         return res_text
 
-    def _post(self, app_key: str, action: str, params: dict, _headers: Optional[dict]) -> str:
+    def _post(self, app_key: str, action: str, params: dict, _headers: Optional[dict] = None) -> str:
         if self.base_url == "":
             raise Exception(
                 "base_url not set, you should call set_app_base_url() first"
