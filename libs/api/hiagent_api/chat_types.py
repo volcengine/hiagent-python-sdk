@@ -38,22 +38,27 @@ class Conversation(BaseSchema):
     app_conversation_id: str = Field(
         description="conversation id",
         validation_alias="AppConversationID",
+        default="",
     )
     conversation_name: str = Field(
         description="conversation name",
         validation_alias="ConversationName",
+        default="",
     )
     create_time: str = Field(
         description="create time",
         validation_alias="CreateTime",
+        default="",
     )
     last_chat_time: str = Field(
         description="last chat time",
         validation_alias="LastChatTime",
+        default="",
     )
     empty_conversation: bool = Field(
         description="empty conversation",
         validation_alias="EmptyConversation",
+        default=False,
     )
 
 
@@ -61,6 +66,7 @@ class CreateConversationResponse(BaseSchema):
     conversation: Conversation = Field(
         description="conversation",
         validation_alias="Conversation",
+        default=None,
     )
 
 
@@ -83,18 +89,22 @@ class VariableConfig(BaseSchema):
     description: str = Field(
         description="description",
         validation_alias="Name",
+        default="",
     )
     show_name: str = Field(
         description="show name",
         validation_alias="ShowName",
+        default="",
     )
     required: bool = Field(
         description="required",
         validation_alias="Required",
+        default=False,
     )
     variable_type: str = Field(
         description="variable_type: Text, Paragraph, Enum",
         validation_alias="VariableType",
+        default="",
     )
     enum_values: Optional[list[str]] = Field(
         description="enum_values",
@@ -107,45 +117,55 @@ class GetAppConfigPreviewResponse(BaseSchema):
     tenant_id: str = Field(
         description="tenant id",
         validation_alias="TenantID",
+        default="",
     )
     workspace_id: str = Field(
         description="workspace id",
         validation_alias="WorkspaceID",
+        default="",
     )
     variable_configs: Optional[list[VariableConfig]] = Field(
-        description="variable_configs", validation_alias="VariableConfigs", default=None
+        description="variable_configs", validation_alias="VariableConfigs", default=[]
     )
     name: str = Field(
         description="app name",
         validation_alias="Name",
+        default="",
     )
     open_message: str = Field(
         description="open message",
         validation_alias="OpenMessage",
+        default="",
     )
     open_query: str = Field(
         description="open query",
         validation_alias="OpenQuery",
+        default="",
     )
     icon: str = Field(
         description="icon",
         validation_alias="Icon",
+        default="",
     )
     background: str = Field(
         description="icon background color",
         validation_alias="Background",
+        default="",
     )
     suggest_enabled: bool = Field(
         description="chat suggestion enabled ",
         validation_alias="SuggestEnabled",
+        default=False,
     )
     image: str = Field(
         description="image",
         validation_alias="Image",
+        default="",
     )
     agent_mode: str = Field(
         description="agent mode: Single or Multi",
         validation_alias="AgentMode",
+        default="",
     )
 
 
@@ -173,6 +193,7 @@ class QueryExtendsInfo(BaseSchema):
         description="files",
         serialization_alias="Files",
         validation_alias="Files",
+        default=[],
     )
 
 
@@ -782,14 +803,17 @@ class ConversationInfo(BaseSchema):
     app_conversation_id: str = Field(
         description="conversation id",
         validation_alias="AppConversationID",
+        default="",
     )
     conversation_id: str = Field(
         description="conversation id",
         validation_alias="ConversationID",
+        default="",
     )
     conversation_name: str = Field(
         description="conversation name",
         validation_alias="ConversationName",
+        default="",
     )
 
 
@@ -797,8 +821,8 @@ class GetConversationListResponse(BaseSchema):
     conversation_list: list[ConversationInfo] = Field(
         description="conversation list",
         validation_alias="ConversationList",
+        default=[],
     )
-
 
 class GetConversationInputsRequest(BaseSchema):
     app_key: str = Field(
@@ -819,6 +843,7 @@ class GetConversationInputsResponse(BaseSchema):
     inputs: dict[str, str] = Field(
         description="conversation inputs",
         validation_alias="Inputs",
+        default={},
     )
 
 
@@ -921,34 +946,42 @@ class MessageAnswerInfo(BaseSchema):
     answer: str = Field(
         description="answer",
         validation_alias="Answer",
+        default="",
     )
     message_id: str = Field(
         description="message id",
         validation_alias="MessageID",
+        default="",
     )
     create_time: int = Field(
         description="create time",
-        validation_alias="CreateTime",
+        validation_alias="CreatedTime",
+        default=0,
     )
     task_id: str = Field(
         description="task id",
         validation_alias="TaskID",
+        default="",
     )
     like: int = Field(
         description="like, -1:dislike;0:normal;1:like",
         validation_alias="Like",
+        default=0,
     )
     total_tokens: int = Field(
         description="total tokens",
         validation_alias="TotalTokens",
+        default=0,
     )
     latency: float = Field(
         description="latency",
         validation_alias="Latency",
+        default=0.0,
     )
     tracing_json_str: str = Field(
         description="tracing json str",
         validation_alias="TracingJsonStr",
+        default="",
     )
 
 
@@ -956,26 +989,32 @@ class ChatMessageInfo(BaseSchema):
     conversation_id: str = Field(
         description="conversation id",
         validation_alias="ConversationID",
+        default="",
     )
     query_id: str = Field(
         description="query id",
         validation_alias="QueryID",
+        default="",
     )
     query: str = Field(
         description="query",
         validation_alias="Query",
+        default="",
     )
     answer_info: MessageAnswerInfo = Field(
         description="answer info",
         validation_alias="AnswerInfo",
+        default=None,
     )
     other_answers: list[MessageAnswerInfo] = Field(
         description="other answers",
         validation_alias="OtherAnswers",
+        default=[],
     )
-    query_extends: QueryExtendsInfo = Field(
+    query_extends: Optional[QueryExtendsInfo] = Field(
         description="query extends",
         validation_alias="QueryExtends",
+        default=None,
     )
 
 
@@ -983,6 +1022,7 @@ class GetConversationMessageResponse(BaseSchema):
     messages: list[ChatMessageInfo] = Field(
         description="messages",
         validation_alias="Messages",
+        default=[],
     )
 
 
@@ -1002,9 +1042,10 @@ class GetMessageInfoRequest(BaseSchema):
 
 
 class GetMessageInfoResponse(BaseSchema):
-    message_info: list[ChatMessageInfo] = Field(
+    message_info: ChatMessageInfo = Field(
         description="message info",
         validation_alias="MessageInfo",
+        default=None,
     )
 
 
@@ -1095,6 +1136,7 @@ class GetSuggestedQuestionsResponse(BaseSchema):
     suggested_questions: list[str] = Field(
         description="suggested questions",
         validation_alias="SuggestedQuestions",
+        default=[],
     )
 
 
@@ -1121,6 +1163,7 @@ class RunAppWorkflowResponse(BaseSchema):
     run_id: str = Field(
         description="run id",
         validation_alias="runId",
+        default="",
     )
 
 
@@ -1147,14 +1190,17 @@ class BizCode(BaseSchema):
     code: str = Field(
         description="biz code",
         validation_alias="Code",
+        default="",
     )
     message: str = Field(
         description="biz message",
         validation_alias="Message",
+        default="",
     )
     data: dict[str, str] = Field(
         description="biz data",
         validation_alias="Data",
+        default={},
     )
 
 
@@ -1162,14 +1208,17 @@ class WorkflowLoopBlock(BaseSchema):
     nodes: dict[str, "WorkflowNode"] = Field(
         description="nodes",
         validation_alias="nodes",
+        default={},
     )
     steps: list[str] = Field(
         description="steps",
         validation_alias="steps",
+        default=[],
     )
     status: str = Field(
         description="status",
         validation_alias="status",
+        default="",
     )
 
 
@@ -1177,38 +1226,47 @@ class WorkflowNode(BaseSchema):
     input: str = Field(
         description="input data",
         validation_alias="input",
+        default="",
     )
     output: str = Field(
         description="output data",
         validation_alias="output",
+        default="",
     )
     status: str = Field(
         description="status",
         validation_alias="status",
+        default="",
     )
     message: str = Field(
         description="message",
         validation_alias="message",
+        default="",
     )
     cost_ms: int = Field(
         description="cost ms",
         validation_alias="costMs",
+        default=0,
     )
     cost_token: int = Field(
         description="cost token",
         validation_alias="costToken",
+        default=0,
     )
     biz_code: BizCode = Field(
         description="biz code",
         validation_alias="BizCode",
+        default=None,
     )
     node_type: str = Field(
         description="node type",
         validation_alias="nodeType",
+        default="",
     )
     loop_block: WorkflowLoopBlock = Field(
         description="loop block",
         validation_alias="loopBlock",
+        default=None,
     )
 
 
@@ -1216,50 +1274,62 @@ class SyncRunAppWorkflowResponse(BaseSchema):
     run_id: str = Field(
         description="run id",
         validation_alias="runId",
+        default="",
     )
     status: str = Field(
         description="status",
         validation_alias="status",
+        default="",
     )
     nodes: dict[str, WorkflowNode] = Field(
         description="nodes",
         validation_alias="nodes",
+        default={},
     )
     steps: list[str] = Field(
         description="steps",
         validation_alias="steps",
+        default=[],
     )
     code: int = Field(
         description="code",
         validation_alias="code",
+        default=0,
     )
     message: str = Field(
         description="message",
         validation_alias="message",
+        default="",
     )
     cost_ms: int = Field(
         description="cost ms",
         validation_alias="costMs",
+        default=0,
     )
     output: str = Field(
         description="output",
         validation_alias="output",
+        default="",
     )
     last_interrupted_node_id: str = Field(
         description="last interrupted node id",
         validation_alias="lastInterruptedNodeId",
+        default="",
     )
     checkpoint_expire_timestamp: int = Field(
         description="checkpoint expire timestamp",
         validation_alias="checkpointExpireTimestamp",
+        default=0,
     )
     msg: str = Field(
         description="msg",
         validation_alias="msg",
+        default="",
     )
     cost_token: int = Field(
         description="cost token",
         validation_alias="costToken",
+        default=0,
     )
 
 
@@ -1286,26 +1356,32 @@ class Oauth2TokenItem(BaseSchema):
     plugin_id: str = Field(
         description="plugin id",
         serialization_alias="PluginID",
+        default="",
     )
     app_id: str = Field(
         description="app id",
         serialization_alias="APPID",
+        default="",
     )
     app_user_id: str = Field(
         description="app user id",
         serialization_alias="APPUserID",
+        default="",
     )
     token_expires_at: Optional[str] = Field(
         description="token expires at",
         serialization_alias="TokenExpiresAt",
+        default="",
     )
     is_token_valid: bool = Field(
         description="is token valid",
         serialization_alias="IsTokenValid",
+        default=False,
     )
     is_refresh_token_valid: bool = Field(
         description="is refresh token valid",
         serialization_alias="IsRefreshTokenValid",
+        default=False,
     )
 
 
@@ -1324,10 +1400,12 @@ class ListOauth2TokenResponse(BaseSchema):
     total: int = Field(
         description="total",
         serialization_alias="Total",
+        default=0,
     )
     items: list[Oauth2TokenItem] = Field(
         description="items",
         serialization_alias="Items",
+        default=[],
     )
 
 
@@ -1335,6 +1413,7 @@ class EventTriggerWebhookResponse(BaseSchema):
     run_id: str = Field(
         description="run id",
         validation_alias="runID",
+        default="",
     )
 
 
@@ -1361,10 +1440,12 @@ class Sorter(BaseSchema):
     sort_field: str = Field(
         description="sort field",
         validation_alias="SortField",
+        default="",
     )
     sort_order: str = Field(
         description="sort order: desc or asc, default desc",
         validation_alias="SortOrder",
+        default="",
     )
 
 
@@ -1421,22 +1502,27 @@ class LongMemoryItem(BaseSchema):
     memory_id: str = Field(
         description="long memory id",
         validation_alias="MemoryID",
+        default="",
     )
     memory: str = Field(
         description="long memory",
         validation_alias="Memory",
+        default="",
     )
     memory_vector_raw_dim: int = Field(
         description="memory vector raw dim",
         validation_alias="MemoryVectorRawDim",
+        default=0,
     )
     created_timestamp: int = Field(
         description="created timestamp, seconds granularity",
         validation_alias="CreateTimestamp",
+        default=0,
     )
     updated_timestamp: int = Field(
         description="updated timestamp, seconds granularity",
         validation_alias="UpdateTimestamp",
+        default=0,
     )
 
 
@@ -1444,10 +1530,12 @@ class ListLongMemoryResponse(BaseSchema):
     total: int = Field(
         description="total",
         validation_alias="Total",
+        default=0,
     )
     items: list[LongMemoryItem] = Field(
         description="items",
         validation_alias="Items",
+        default=[],
     )
 
 
@@ -1580,22 +1668,27 @@ class AppSkillAsyncTaskInfo(BaseSchema):
     task_id: str = Field(
         description="task id",
         validation_alias="TaskID",
+        default="",
     )
     status: str = Field(
         description="status: PROCESSING,SUCCEED,FAILED,INVALID",
         validation_alias="Status",
+        default="",
     )
     origin_message_id: str = Field(
         description="origin message id",
         validation_alias="OriginMessageID",
+        default="",
     )
     reason: str = Field(
         description="reason",
         validation_alias="Reason",
+        default="",
     )
     message_id: str = Field(
         description="message id",
         validation_alias="MessageID",
+        default="",
     )
 
 
@@ -1603,6 +1696,7 @@ class QueryAppSkillAsyncTaskResponse(BaseSchema):
     infos: list[AppSkillAsyncTaskInfo] = Field(
         description="infos",
         validation_alias="Infos",
+        default=[],
     )
 
 
@@ -1661,31 +1755,37 @@ class UserVariables(BaseSchema):
         description="user variable name",
         validation_alias="Name",
         serialization_alias="Name",
+        default="",
     )
     description: str = Field(
         description="user variable description",
         validation_alias="Description",
         serialization_alias="Description",
+        default="",
     )
     scope: str = Field(
         description="user variable scope: Agent,Conversation",
         validation_alias="Scope",
         serialization_alias="Scope",
+        default="",
     )
     value: str = Field(
         description="user variable value",
         validation_alias="Value",
         serialization_alias="Value",
+        default="",
     )
     default: str = Field(
         description="default value",
         validation_alias="Default",
         serialization_alias="Default",
+        default="",
     )
     update_time: str = Field(
         description="update time",
         validation_alias="UpdateTime",
         serialization_alias="UpdateTime",
+        default="",
     )
 
 
@@ -1693,6 +1793,7 @@ class GetAppUserVariablesResponse(BaseSchema):
     user_variables: list[UserVariables] = Field(
         description="user variables",
         validation_alias="UserVariables",
+        default=[],
     )
 
 
@@ -1742,10 +1843,12 @@ class TriggerPromptConfig(BaseSchema):
     content: str = Field(
         description="content",
         validation_alias="Content",
+        default="",
     )
     inputs: dict[str, str] = Field(
         description="inputs",
         validation_alias="Inputs",
+        default={},
     )
 
 
@@ -1753,14 +1856,17 @@ class TriggerToolConfig(BaseSchema):
     tool_id: str = Field(
         description="tool id",
         validation_alias="ToolID",
+        default="",
     )
     input_data: str = Field(
         description="input data json str",
         validation_alias="InputData",
+        default="",
     )
     input_data_schema: str = Field(
         description="input data schema",
         validation_alias="InputDataSchema",
+        default="",
     )
 
 
@@ -1768,14 +1874,17 @@ class TriggerWorkflowConfig(BaseSchema):
     workflow_id: str = Field(
         description="workflow id",
         validation_alias="WorkflowID",
+        default="",
     )
     input_data: str = Field(
         description="input data json str",
         validation_alias="InputData",
+        default="",
     )
     input_data_schema: str = Field(
         description="input data schema",
         validation_alias="InputDataSchema",
+        default="",
     )
 
 
@@ -1783,50 +1892,62 @@ class NodeParameters(BaseSchema):
     name: str = Field(
         description="node parameter name",
         validation_alias="Name",
+        default="",
     )
     desc: str = Field(
         description="node parameter description",
         validation_alias="Desc",
+        default="",
     )
     required: bool = Field(
         description="node parameter required",
         validation_alias="Required",
+        default=False,
     )
     type: str = Field(
         description="node parameter type:-1:Unknown;0:String;1Integer;2:Boolean;3:Number;4:Object;5:ArrayOfString;6:ArrayOfInteger;7:ArrayOfBoolean;8:ArrayOfNumber;9:ArrayOfObject;10:File;11:ArrayOfFile",
         validation_alias="Type",
+        default="",
     )
     sub_parameters: list["NodeParameters"] = Field(
         description="sub parameters",
         validation_alias="SubParameters",
+        default=[],
     )
     default: str = Field(
         description="default value",
         validation_alias="Default",
+        default="",
     )
     is_secret: bool = Field(
         description="is secret",
         validation_alias="IsSecret",
+        default=False,
     )
     is_visible: Optional[bool] = Field(
         description="is visible",
         validation_alias="IsVisible",
+        default=False,
     )
     file_category: Optional[str] = Field(
         description="file category: Doc,Txt,Image,Audio,Video,Compressed",
         validation_alias="FileCategory",
+        default="",
     )
     desc_en: str = Field(
         description="description en",
         validation_alias="DescEn",
+        default="",
     )
     desc_zh_hans: str = Field(
         description="description zh",
         validation_alias="DescZhHans",
+        default="",
     )
     desc_zh_hant: str = Field(
         description="description zh-hant",
         validation_alias="DescZhHant",
+        default="",
     )
 
 
@@ -1834,85 +1955,104 @@ class TriggerConfig(BaseSchema):
     name: str = Field(
         description="trigger name",
         validation_alias="Name",
+        default="",
     )
     trigger_type: str = Field(
         description="trigger type: Cron,Event",
         validation_alias="Type",
+        default="",
     )
     cron_expr: Optional[str] = Field(
         description="cron expr",
         validation_alias="CronExpr",
+        default="",
     )
     show_cron_expr: bool = Field(
         description="show cron expr",
         validation_alias="ShowCronExpr",
+        default=False,
     )
     task_type: str = Field(
         description="task type: Prompt,Plugin,Workflow",
         validation_alias="TaskType",
+        default="",
     )
     prompt_config: Optional[TriggerPromptConfig] = Field(
         description="prompt config",
         validation_alias="PromptConfig",
+        default=None,
     )
     tool_config: Optional[TriggerToolConfig] = Field(
         description="tool config",
         validation_alias="ToolConfig",
+        default=None,
     )
     workflow_config: Optional[TriggerWorkflowConfig] = Field(
         description="workflow config",
         validation_alias="WorkflowConfig",
+        default=None,
     )
     webhook_key: Optional[str] = Field(
         description="webhook key",
         validation_alias="WebhookKey",
+        default="",
     )
     bearer_token: Optional[str] = Field(
         description="bearer token",
         validation_alias="BearerToken",
+        default="",
     )
     request_parameter_schema: list[NodeParameters] = Field(
         description="request parameters schema",
         validation_alias="RequestParameterSchema",
+        default=[],
     )
-
 
 class TriggerRunRecord(BaseSchema):
     run_id: str = Field(
         description="run id",
         validation_alias="RunID",
+        default="",
     )
     name: str = Field(
         description="trigger name",
         validation_alias="Name",
+        default="",
     )
     trigger_config: Optional[TriggerConfig] = Field(
         description="trigger config",
         validation_alias="TriggerConfig",
+        default=None,
     )
     scene: str = Field(
         description="trigger scene: debug,production",
         validation_alias="Scene",
+        default="",
     )
     query: Optional[str] = Field(
         description="query string",
         validation_alias="Query",
+        default="",
     )
     answer: Optional[str] = Field(
         description="answer string",
         validation_alias="Answer",
+        default="",
     )
     user_id: Optional[str] = Field(
         description="user id",
         validation_alias="UserID",
+        default="",
     )
     status: str = Field(
         description="run status: running,succeed,failed",
         validation_alias="Status",
+        default="",
     )
     reason: Optional[str] = Field(
         description="reason string",
         validation_alias="Reason",
+        default="",
     )
 
 
@@ -1920,8 +2060,10 @@ class QueryTriggerRunRecordsResponse(BaseSchema):
     total: int = Field(
         description="total number",
         validation_alias="total",
+        default=0,
     )
     records: list[TriggerRunRecord] = Field(
         description="trigger records",
         validation_alias="records",
+        default=[],
     )
