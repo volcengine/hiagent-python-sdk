@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import Enum
+from token import OP
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
@@ -647,9 +648,13 @@ class EvaReportRuleTarget(BaseModel):
     TargetDetail: EvaReportTargetDetail = Field(
         title="Target Details", description="Target details"
     )
-    AvgScore: float = Field(title="Average Score", description="Average score")
-    Percent: float = Field(title="Percentage", description="Percentage")
-    ScoreMap: Dict[str, Any] = Field(title="Score Map", description="Score mapping")
+    AvgScore: Optional[float] = Field(
+        title="Average Score", description="Average score"
+    )
+    Percent: Optional[float] = Field(title="Percentage", description="Percentage")
+    ScoreMap: Optional[Dict[str, Any]] = Field(
+        title="Score Map", description="Score mapping"
+    )
     Duration: int = Field(title="Duration", description="Duration in milliseconds")
     CostTokens: int = Field(
         title="Cost Tokens", description="Number of tokens consumed"
