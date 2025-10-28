@@ -32,7 +32,7 @@ from hiagent_api import eva_types
 from hiagent_eva import client
 
 # Configure logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -44,7 +44,6 @@ def my_inference_function(
     results = []
     message_list = []
     for case in case_data_list:
-        logger.info(f"case={case}")
         input = case["input"].CellContent[0].Text
         message_list.append({"role": "user", "content": input})
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
