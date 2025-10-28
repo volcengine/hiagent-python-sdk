@@ -62,21 +62,17 @@ class EvaService(Service):
         if not scheme:
             raise Exception(f"invalid endpoint format: {endpoint}")
 
-        # Fix observe's port handling bug while maintaining consistent architecture
         hostname = parsed.hostname
         if not hostname:
             raise Exception(f"invalid endpoint format: {endpoint}")
 
-        # Robust port handling: only add port when it actually exists
         if parsed.port:
             hostname = f"{hostname}:{parsed.port}"
-        # Don't append ":None", this was observe's bug
 
-        # Completely consistent with observe - use empty AK/SK to create Credentials
         service_info = ServiceInfo(
             hostname,
             {"Accept": "application/json"},
-            Credentials("", "", service="eva", region=region),  # Empty AK/SK!
+            Credentials("", "", service="eva", region=region),
             5,
             5,
             scheme=scheme,
@@ -93,17 +89,17 @@ class EvaService(Service):
                 {},
                 {},
             ),
-            "ListEvaDatasetConversations": ApiInfo(
+            "ListDatasetCases": ApiInfo(
                 "POST",
                 "/",
-                {"Action": "ListEvaDatasetConversations", "Version": "2025-02-01"},
+                {"Action": "ListDatasetCases", "Version": "2025-02-01"},
                 {},
                 {},
             ),
-            "ListEvaDatasetColumns": ApiInfo(
+            "ListColumns": ApiInfo(
                 "POST",
                 "/",
-                {"Action": "ListEvaDatasetColumns", "Version": "2025-02-01"},
+                {"Action": "ListColumns", "Version": "2025-02-01"},
                 {},
                 {},
             ),
@@ -146,34 +142,34 @@ class EvaService(Service):
             self.__request("CreateEvaTask", params.model_dump())
         )
 
-    def ListEvaDatasetConversations(
-        self, params: eva_types.ListEvaDatasetConversationsRequest
-    ) -> eva_types.ListEvaDatasetConversationsResponse:
+    def ListDatasetCases(
+        self, params: eva_types.ListDatasetCasesRequest
+    ) -> eva_types.ListDatasetCasesResponse:
         """Get paginated evaluation dataset conversation list
 
         Args:
             params: Get dataset conversation list request parameters
 
         Returns:
-            ListEvaDatasetConversationsResponse: Dataset conversation list response
+            ListDatasetCasesResponse: Dataset conversation list response
         """
-        return eva_types.ListEvaDatasetConversationsResponse.model_validate(
-            self.__request("ListEvaDatasetConversations", params.model_dump())
+        return eva_types.ListDatasetCasesResponse.model_validate(
+            self.__request("ListDatasetCases", params.model_dump())
         )
 
-    def ListEvaDatasetColumns(
-        self, params: eva_types.ListEvaDatasetColumnsRequest
-    ) -> eva_types.ListEvaDatasetColumnsResponse:
+    def ListColumns(
+        self, params: eva_types.ListColumnsRequest
+    ) -> eva_types.ListColumnsResponse:
         """Get evaluation dataset column information
 
         Args:
             params: Get dataset column information request parameters
 
         Returns:
-            ListEvaDatasetColumnsResponse: Dataset column information response
+            ListColumnsResponse: Dataset column information response
         """
-        return eva_types.ListEvaDatasetColumnsResponse.model_validate(
-            self.__request("ListEvaDatasetColumns", params.model_dump())
+        return eva_types.ListColumnsResponse.model_validate(
+            self.__request("ListColumns", params.model_dump())
         )
 
     def ExecEvaTaskRowGroup(
