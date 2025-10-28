@@ -577,7 +577,7 @@ integrations = [
 
 [[package]]
 name = "hiagent-eva"
-version = "2.0.1"
+version = "2.1.0"
 source = { editable = "libs/eva" }
 dependencies = [
     { name = "hiagent-api" },
