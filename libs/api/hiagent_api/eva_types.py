@@ -52,6 +52,13 @@ class CellContentPartType(str, Enum):
     VIDEO_URL = "video_url"
 
 
+class ColumnSchemaType(str, Enum):
+    """Schema type"""
+
+    TEXT = "Text"
+    MULTI_CONTENT = "MultiContent"
+
+
 class ChatMessageImageURL(BaseModel):
     """Chat message image URL"""
 
@@ -68,6 +75,21 @@ class CellContentPart(BaseModel):
     """Cell content part"""
 
     Type: Optional[CellContentPartType] = Field(
+        default=None, description="Content part type"
+    )
+    Text: Optional[str] = Field(default=None, description="Text content")
+    ImageURL: Optional[ChatMessageImageURL] = Field(
+        default=None, description="Image URL"
+    )
+    VideoURL: Optional[ChatMessageVideoURL] = Field(
+        default=None, description="Video URL"
+    )
+
+
+class CellContent(BaseModel):
+    """Cell content"""
+
+    Type: CellContentPartType = Field(
         default=None, alias="type", description="Content part type"
     )
     Text: Optional[str] = Field(default=None, alias="text", description="Text content")
@@ -79,8 +101,13 @@ class CellContentPart(BaseModel):
     )
 
 
-# CellContent is a list of CellContentPart
-CellContent = List[CellContentPart]
+class Cell(BaseModel):
+    """Repeated data"""
+
+    CellContent: Optional[List[CellContentPart]] = Field(
+        default=None, description="Cell content"
+    )
+    Text: Optional[str] = Field(default=None, description="Text content")
 
 
 class ModelAgentConfig(BaseModel):
@@ -196,6 +223,10 @@ class CreateEvaTaskRequest(BaseModel):
         title="Dataset Task Configuration",
         description="Dataset task configuration",
     )
+    DatasetVersionID: str = Field(
+        title="Dataset Version ID",
+        description="Dataset version ID",
+    )
 
 
 class CreateEvaTaskResponse(BaseModel):
@@ -210,12 +241,18 @@ class CreateEvaTaskResponse(BaseModel):
     )
 
 
-class ListEvaDatasetConversationsRequest(BaseModel):
+class ListDatasetCasesRequest(BaseModel):
     WorkspaceID: str = Field(
         title="Workspace ID",
         description="Workspace ID",
     )
     DatasetID: str = Field(title="Dataset ID", description="Dataset ID")
+    VersionID: str = Field(title="Dataset Version ID", description="Dataset version ID")
+    UseLatestPublishedVersion: bool = Field(
+        default=False,
+        title="Use Latest Published Version",
+        description="Whether to use the latest published version",
+    )
     PageNumber: Optional[int] = Field(
         default=1,
         title="Page Number",
@@ -298,7 +335,6 @@ class EvaDatasetConversationData(BaseModel):
 class EvaDatasetColumnCell(BaseModel):
     """Evaluation dataset column cell data"""
 
-    ColumnID: str = Field(title="Column ID", description="Evaluation dataset column ID")
     ConversationGroup: List[EvaDatasetConversationData] = Field(
         title="Conversation Group",
         description="Evaluation dataset conversation round data",
@@ -310,23 +346,12 @@ class EvaDatasetColumn(BaseModel):
 
     ID: str = Field(title="Column ID", description="Column ID")
     Name: str = Field(title="Column Name", description="Column name")
-    Description: Optional[str] = Field(
-        default=None, title="Column Description", description="Column description"
+    SchemaType: Optional[ColumnSchemaType] = Field(
+        title="Schema Type", description="Schema type"
     )
 
 
-class EvaDatasetConversationItem(BaseModel):
-    """Evaluation dataset conversation item"""
-
-    RowID: str = Field(
-        title="Data Row ID", description="Evaluation dataset data row ID"
-    )
-    DataRow: List[EvaDatasetColumnCell] = Field(
-        title="Data Row", description="Evaluation dataset conversation column data"
-    )
-
-
-class ListEvaDatasetColumnsRequest(BaseModel):
+class ListColumnsRequest(BaseModel):
     """Get evaluation dataset column list request"""
 
     WorkspaceID: str = Field(
@@ -334,28 +359,7 @@ class ListEvaDatasetColumnsRequest(BaseModel):
         description="Workspace ID",
     )
     DatasetID: str = Field(title="Dataset ID", description="Dataset ID")
-
-
-class ListEvaDatasetColumnsResponse(BaseModel):
-    """Get evaluation dataset column list response"""
-
-    Columns: List[EvaDatasetColumn] = Field(
-        title="Evaluation Dataset Column List",
-        description="Evaluation dataset column list",
-    )
-
-
-class ListEvaDatasetConversationsResponse(BaseModel):
-    """Evaluation dataset conversation list response"""
-
-    Items: List[EvaDatasetConversationItem] = Field(
-        title="Conversation List", description="Evaluation dataset conversation list"
-    )
-    Total: int = Field(
-        title="Total",
-        description="Total number of evaluation dataset conversations",
-        example=100,
-    )
+    VersionID: str = Field(title="Dataset Version ID", description="Dataset version ID")
 
 
 class InferenceResult(BaseModel):
@@ -386,7 +390,7 @@ class CaseData(BaseModel):
 
     model_config = {"extra": "allow"}  # Allow dynamic fields
 
-    def get_column_data(self, column_name: str) -> Optional[CellContent]:
+    def get_column_data(self, column_name: str) -> Optional[Cell]:
         """
         Get data from specified column
 
@@ -399,21 +403,6 @@ class CaseData(BaseModel):
         # In Pydantic v2, extra fields are stored in __pydantic_extra__
         if hasattr(self, "__pydantic_extra__"):
             return self.__pydantic_extra__.get(column_name)
-        return None
-
-    def get_column_text(self, column_name: str) -> Optional[str]:
-        """
-        Get text data from specified column
-
-        Args:
-            column_name: Column name
-
-        Returns:
-            Text content of the column, returns None if not exists or not text type
-        """
-        data = self.get_column_data(column_name)
-        if data and hasattr(data, "TextData"):
-            return data.TextData
         return None
 
     def list_columns(self) -> List[str]:
@@ -429,7 +418,7 @@ class CaseData(BaseModel):
         return []
 
     # Dictionary-style operation support
-    def __getitem__(self, column_name: str) -> Optional[CellContent]:
+    def __getitem__(self, column_name: str) -> Optional[Cell]:
         """
         Support case_data[column_name] access pattern
 
@@ -441,7 +430,7 @@ class CaseData(BaseModel):
         """
         return self.get_column_data(column_name)
 
-    def __setitem__(self, column_name: str, value: CellContent):
+    def __setitem__(self, column_name: str, value: Cell):
         """
         Support case_data[column_name] = value assignment pattern
 
@@ -493,16 +482,14 @@ class CaseData(BaseModel):
         """
         return self.list_columns()
 
-    def values(self) -> List[Optional[CellContent]]:
+    def values(self) -> List[Optional[Cell]]:
         """
         Get data from all columns
 
         Returns:
             List of cell content
         """
-        return [
-            self.get_column_data(column_name) for column_name in self.list_columns()
-        ]
+        return [self.get_column_data(column_id) for column_id in self.list_columns()]
 
     def get(self, column_name: str, default=None):
         """
@@ -517,6 +504,17 @@ class CaseData(BaseModel):
         """
         data = self.get_column_data(column_name)
         return data if data is not None else default
+
+
+class EvaDatasetConversationItem(BaseModel):
+    """Evaluation dataset conversation item"""
+
+    DatasetCaseID: str = Field(
+        title="Dataset Case ID", description="Evaluation dataset case ID"
+    )
+    RepeatedData: List[Dict[str, Cell]] = Field(
+        title="Repeated Data", description="Evaluation dataset case data"
+    )
 
 
 class EvaConversationStatus(str, Enum):
@@ -986,3 +984,23 @@ class GetEvaTaskRequest(BaseModel):
 
 # GetEvaTaskResponse 就是 EvaTaskItem
 GetEvaTaskResponse = EvaTaskItem
+
+
+class ListColumnsResponse(BaseModel):
+    """Get evaluation dataset column list response"""
+
+    Columns: List[EvaDatasetColumn] = Field(
+        title="Evaluation Dataset Column List",
+        description="Evaluation dataset column list",
+    )
+
+
+class ListDatasetCasesResponse(BaseModel):
+    """Evaluation dataset conversation list response"""
+
+    Items: Optional[List[EvaDatasetConversationItem]] = Field(
+        title="Conversation List", description="Evaluation dataset conversation list"
+    )
+    Total: int = Field(
+        title="Total", description="Total number of evaluation dataset conversations"
+    )

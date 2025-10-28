@@ -14,12 +14,11 @@
 # limitations under the License.
 import logging
 import time
-from typing import Callable, Dict, List, Optional
-
-from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
+from typing import Callable, List, Optional
 
 from hiagent_api import eva_types
 from hiagent_api.eva import EvaService
+from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +60,7 @@ class Client:
     def create_task(
         self,
         dataset_id: str,
+        dataset_version_id: str,
         task_name: str,
         ruleset_id: str,
         description: str = "",
@@ -72,6 +72,7 @@ class Client:
 
         Args:
             dataset_id: Dataset ID
+            dataset_version_id: Dataset version ID
             task_name: Task name
             ruleset_id: Ruleset ID
             description: Task description
@@ -110,6 +111,7 @@ class Client:
             Description=description,
             Targets=targets,
             DatasetID=dataset_id,
+            DatasetVersionID=dataset_version_id,
             RulesetID=ruleset_id,
             RunImmediately=run_immediately,
         )
@@ -117,8 +119,12 @@ class Client:
         return self.eva_service.CreateEvaTask(request)
 
     def list_dataset_conversations(
-        self, dataset_id: str, page_number: int = 1, page_size: int = 20
-    ) -> eva_types.ListEvaDatasetConversationsResponse:
+        self,
+        dataset_id: str,
+        dataset_version_id: str,
+        page_number: int = 1,
+        page_size: int = 20,
+    ) -> eva_types.ListDatasetCasesResponse:
         """
         List dataset conversations
 
@@ -128,46 +134,48 @@ class Client:
             page_size: Page size
 
         Returns:
-            ListEvaDatasetConversationsResponse: Dataset conversation response
+            ListDatasetCasesResponse: Dataset conversation response
         """
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = eva_types.ListEvaDatasetConversationsRequest(
+        request = eva_types.ListDatasetCasesRequest(
             WorkspaceID=self.workspace_id,
             DatasetID=dataset_id,
+            VersionID=dataset_version_id,
             PageNumber=page_number,
             PageSize=page_size,
         )
 
-        return self.eva_service.ListEvaDatasetConversations(request)
+        return self.eva_service.ListDatasetCases(request)
 
     def list_dataset_columns(
-        self, dataset_id: str
-    ) -> eva_types.ListEvaDatasetColumnsResponse:
+        self, dataset_id: str, dataset_version_id: str
+    ) -> eva_types.ListColumnsResponse:
         """
         Get dataset column information
 
         Args:
             dataset_id: Dataset ID
-
+            dataset_version_id: Dataset version ID
         Returns:
-            ListEvaDatasetColumnsResponse: Dataset column information response
+            ListColumnsResponse: Dataset column information response
         """
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = eva_types.ListEvaDatasetColumnsRequest(
+        request = eva_types.ListColumnsRequest(
             WorkspaceID=self.workspace_id,
             DatasetID=dataset_id,
+            VersionID=dataset_version_id,
         )
 
-        return self.eva_service.ListEvaDatasetColumns(request)
+        return self.eva_service.ListColumns(request)
 
     def submit_task_row_group_results(
         self,
         task_id: str,
-        row_id: str,
+        case_id: str,
         target_results: Optional[
             List[eva_types.EvaTaskResultUpdateTargetContent]
         ] = None,
@@ -177,7 +185,7 @@ class Client:
 
         Args:
             task_id: Task ID
-            row_id: Row ID
+            case_id: Case ID
             target_results: Target results list
 
         Returns:
@@ -189,7 +197,7 @@ class Client:
         request = eva_types.ExecEvaTaskRowGroupRequest(
             WorkspaceID=self.workspace_id,
             TaskID=task_id,
-            RowID=row_id,
+            RowID=case_id,
             TargetResults=target_results,
         )
 
@@ -237,71 +245,22 @@ class Client:
         # Create column ID to column name mapping
         column_map = {col.ID: col.Name for col in columns}
 
-        # Organize data by rounds
-        rounds_data: Dict[int, Dict[str, eva_types.CellContent]] = {}
-
-        for data_cell in conversation_item.DataRow:
-            column_name = column_map.get(
-                data_cell.ColumnID, f"Column_{data_cell.ColumnID}"
-            )
-
-            for conv_data in data_cell.ConversationGroup:
-                round_num = conv_data.Round
-                if round_num not in rounds_data:
-                    rounds_data[round_num] = {}
-                rounds_data[round_num][column_name] = self._convert_to_cell_content(
-                    conv_data.AtomicData
-                )
-
-        # Create CellContent list in round order
-        sorted_rounds = sorted(rounds_data.keys())
         case_data_list = []
 
-        for round_num in sorted_rounds:
-            case_data = eva_types.CaseData(**rounds_data[round_num])
+        for round_cell_map in conversation_item.RepeatedData:
+            round_case_map = {
+                column_map[column_id]: cell
+                for column_id, cell in round_cell_map.items()
+            }
+            case_data = eva_types.CaseData(**round_case_map)
             case_data_list.append(case_data)
 
         return case_data_list
 
-    def _convert_to_cell_content(
-        self, atomic_data: eva_types.EvaDatasetAtomicData
-    ) -> eva_types.CellContent:
-        """
-        Convert atomic data to cell content
-        """
-        content = []
-        if atomic_data.Type == eva_types.DatasetAtomicDataType.TEXT:
-            content.append(
-                eva_types.CellContentPart(
-                    Type=eva_types.CellContentPartType.TEXT,
-                    Text=atomic_data.TextData,
-                )
-            )
-        elif atomic_data.Type == eva_types.DatasetAtomicDataType.IMAGE:
-            content.extend(
-                [
-                    eva_types.CellContentPart(
-                        Type=eva_types.CellContentPartType.IMAGE_URL,
-                        ImageURL=image.URL,
-                    )
-                    for image in atomic_data.ImageData
-                ]
-            )
-        elif atomic_data.Type == eva_types.DatasetAtomicDataType.FILE:
-            content.extend(
-                [
-                    eva_types.CellContentPart(
-                        Type=eva_types.CellContentPartType.VIDEO_URL,
-                        VideoURL=file.URL,
-                    )
-                    for file in atomic_data.Files
-                ]
-            )
-        return content
-
     def run_evaluation(
         self,
         dataset_id: str,
+        dataset_version_id: str,
         task_name: str,
         inference_function: Callable[
             [List[eva_types.CaseData]], List[eva_types.InferenceResult]
@@ -315,6 +274,7 @@ class Client:
 
         Args:
             dataset_id: Dataset ID
+            dataset_version_id: Dataset version ID
             task_name: Task name
             inference_function: Inference function that receives case data list and returns user inference results list
             ruleset_id: Ruleset ID
@@ -329,6 +289,7 @@ class Client:
             self.logger.info(f"Creating evaluation task: {task_name}")
             task_response = self.create_task(
                 dataset_id=dataset_id,
+                dataset_version_id=dataset_version_id,
                 task_name=task_name,
                 ruleset_id=ruleset_id,
                 model_agent_config=target_config,
@@ -338,50 +299,62 @@ class Client:
 
             # 2. Get dataset column information
             self.logger.info("Fetching dataset columns...")
-            columns_response = self.list_dataset_columns(dataset_id)
+            columns_response = self.list_dataset_columns(dataset_id, dataset_version_id)
             columns = columns_response.Columns
             self.logger.info(
                 f"Fetched {len(columns)} columns: {[col.Name for col in columns]}"
             )
+            time.sleep(2)
 
             # 3. Get dataset conversations
             self.logger.info("Fetching dataset conversations...")
-            conversations_response = self.list_dataset_conversations(
-                dataset_id=dataset_id, page_size=max_conversations
-            )
-            conversation_items = conversations_response.Items
-            self.logger.info(f"Fetched {len(conversation_items)} conversation items")
-
-            # 4. Execute inference and submit results
-            self.logger.info("Running inference and submitting results...")
-            time.sleep(2)
-            for conversation_item in conversation_items:
-                # Convert to case data list
-                case_data_list = self._convert_to_case_data_list(
-                    conversation_item, columns
+            page_number = 1
+            while True:
+                conversations_response = self.list_dataset_conversations(
+                    dataset_id=dataset_id,
+                    dataset_version_id=dataset_version_id,
+                    page_size=max_conversations,
+                    page_number=page_number,
                 )
-
-                # Call inference function, passing case data list
-                target_content_pairs = self._execute_inference_with_wrapper(
-                    inference_function, case_data_list, conversation_item.RowID
+                conversation_items = conversations_response.Items
+                self.logger.info(
+                    f"Fetched {len(conversation_items) if conversation_items else 0} conversation items"
                 )
+                if not conversation_items or len(conversation_items) == 0:
+                    break
+                page_number += 1
 
-                # Create target results
-                target_results = [
-                    eva_types.EvaTaskResultUpdateTargetContent(
-                        TargetType=eva_types.EvaTargetType.CUSTOM_APP,
-                        TargetID=self.app_id,
-                        Results=target_content_pairs,
+                # 4. Execute inference and submit results
+                self.logger.info("Running inference and submitting results...")
+                for conversation_item in conversation_items:
+                    # Convert to case data list
+                    case_data_list = self._convert_to_case_data_list(
+                        conversation_item, columns
                     )
-                ]
 
-                # Submit results
-                self.submit_task_row_group_results(
-                    task_id, conversation_item.RowID, target_results
-                )
-                self.logger.debug(
-                    f"Results submitted for row {conversation_item.RowID}"
-                )
+                    # Call inference function, passing case data list
+                    target_content_pairs = self._execute_inference_with_wrapper(
+                        inference_function,
+                        case_data_list,
+                        conversation_item.DatasetCaseID,
+                    )
+
+                    # Create target results
+                    target_results = [
+                        eva_types.EvaTaskResultUpdateTargetContent(
+                            TargetType=eva_types.EvaTargetType.CUSTOM_APP,
+                            TargetID=self.app_id,
+                            Results=target_content_pairs,
+                        )
+                    ]
+
+                    # Submit results
+                    self.submit_task_row_group_results(
+                        task_id, conversation_item.DatasetCaseID, target_results
+                    )
+                    self.logger.debug(
+                        f"Results submitted for case {conversation_item.DatasetCaseID}"
+                    )
 
             # 5. Wait for processing to complete
             self.logger.info("Waiting for evaluation to complete...")

@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 """
 Eva SDK Usage Example
 
@@ -32,7 +32,7 @@ from hiagent_api import eva_types
 from hiagent_eva import client
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
@@ -44,7 +44,8 @@ def my_inference_function(
     results = []
     message_list = []
     for case in case_data_list:
-        input = case["input"][0].Text
+        logger.info(f"case={case}")
+        input = case["input"].CellContent[0].Text
         message_list.append({"role": "user", "content": input})
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
         message_list.append({"role": "assistant", "content": content})
@@ -72,6 +73,9 @@ def main():
         "-r", "--ruleset-id", required=True, help="Ruleset ID for evaluation"
     )
     parser.add_argument("-n", "--name", required=True, help="Task name")
+    parser.add_argument(
+        "-v", "--dataset-version-id", required=True, help="Dataset version ID"
+    )
     args = parser.parse_args()
 
     print("=== Eva SDK Example ===\n")
@@ -87,6 +91,7 @@ def main():
 
     # Use command line arguments
     dataset_id = args.dataset_id
+    dataset_version_id = args.dataset_version_id
     ruleset_id = args.ruleset_id
     task_name = args.name
 
@@ -94,9 +99,11 @@ def main():
         # Run evaluation
         print("Starting evaluation...")
         print(f"Dataset ID: {dataset_id}")
+        print(f"Dataset Version ID: {dataset_version_id}")
         print(f"Ruleset ID: {ruleset_id}")
         report = provider.run_evaluation(
             dataset_id=dataset_id,
+            dataset_version_id=dataset_version_id,
             task_name=task_name,
             inference_function=my_inference_function,
             ruleset_id=ruleset_id,
@@ -105,8 +112,7 @@ def main():
 
         # Print results
         print("\n✓ Evaluation completed!")
-        print(f"   Task ID: {report.TaskID}")
-        print(f"   Task Name: {report.TaskName}")
+        print(f"   Task Name: {task_name}")
         print(f"   Status: {report.Status}")
         print(f"   Number of Rules: {len(report.Rules)}")
         print(f"   Number of Targets: {len(report.Targets)}")
