@@ -1,13 +1,13 @@
 [project]
 name = "hiagent-eva"
-version = "2.1.0"
+version = "2.3.0"
 description = "HiAgent Eva SDK"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "tenacity>=9.1.2",
     "python-dotenv>=1.1.0",
-    "hiagent-api>=0.1.0,<2.2.0",
+    "hiagent-api>=2.3.0",
     "requests>=2.32.3",
 ]
 
