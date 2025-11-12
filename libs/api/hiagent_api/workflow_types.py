@@ -170,7 +170,7 @@ class RunWorkflowResponse(BaseSchema):
         description="运行状态, success, stopped, failed, interrupted, processing",
     )
     output: str = Field(description="end 节点的输出，是一个 json 字符串")
-    cost_ms: int = Field(description="耗时", validation_alias="costMs")
+    cost_ms: int = Field(description="耗时", validation_alias="costMs", default=0)
 
 
 class AsyncRunWorkflowResponse(BaseSchema):
