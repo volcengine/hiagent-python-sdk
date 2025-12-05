@@ -194,14 +194,18 @@ class Client:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
 
-        request = eva_types.ExecEvaTaskRowGroupRequest(
-            WorkspaceID=self.workspace_id,
-            TaskID=task_id,
-            RowID=case_id,
-            TargetResults=target_results,
-        )
+        try:
+            request = eva_types.ExecEvaTaskRowGroupRequest(
+                WorkspaceID=self.workspace_id,
+                TaskID=task_id,
+                RowID=case_id,
+                TargetResults=target_results,
+            )
 
-        return self.eva_service.ExecEvaTaskRowGroup(request)
+            return self.eva_service.ExecEvaTaskRowGroup(request)
+        except Exception as e:
+            if "task result is already succeed" not in str(e) and "task result is already running" not in str(e):
+                raise e
 
     @retry(
         stop=stop_after_attempt(3),
@@ -226,6 +230,77 @@ class Client:
         )
 
         return self.eva_service.GetEvaTaskReport(request)
+
+    def pause_task(self, task_name: str):
+        if not self.eva_service:
+            raise ValueError("Client not initialized. Call init() first.")
+        try:
+            # 1. Get task_id from task_name
+            task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
+                WorkspaceID=self.workspace_id, TaskName=task_name
+            ))
+            task_id = task.TaskID
+            # 2. Pause task
+            request = eva_types.PauseEvaTaskRequest(
+                WorkspaceID=self.workspace_id,
+                TaskID=task_id,
+            )
+            self.eva_service.PauseEvaTask(request)
+            # 3. Wait for processing to complete
+            self.logger.info("Waiting for evaluation to pause...")
+            self._wait_task_paused(task_id=task_id)
+            self.logger.info(f"evaluation Paused")
+        except Exception as e:
+            self.logger.error(f"Pause failed: {e}", exc_info=True)
+            raise e
+
+    def delete_task(self, task_name: str):
+        if not self.eva_service:
+            raise ValueError("Client not initialized. Call init() first.")
+        try:
+            # 1. Get task_id from task_name
+            task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
+                WorkspaceID=self.workspace_id, TaskName=task_name
+            ))
+            task_id = task.TaskID
+            # 2. Delete task
+            request = eva_types.DeleteEvaTaskRequest(
+                WorkspaceID=self.workspace_id,
+                TaskID=task_id,
+            )
+            self.eva_service.DeleteEvaTask(request)
+        except Exception as e:
+            self.logger.error(f"Delete failed: {e}", exc_info=True)
+            raise e
+
+    def retry_task(self, task_name: str) -> eva_types.GetEvaTaskReportResponse:
+        if not self.eva_service:
+            raise ValueError("Client not initialized. Call init() first.")
+        try:
+            # 1. Get task_id from task_name
+            task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
+                WorkspaceID=self.workspace_id, TaskName=task_name
+            ))
+            task_id = task.TaskID
+            # 2. Retry task
+            request = eva_types.RetryEvaTaskRequest(
+                WorkspaceID=self.workspace_id,
+                TaskID=task_id,
+                Option=eva_types.RetryOption(ResultEvaluate=True),
+            )
+            self.eva_service.RetryEvaTask(request)
+            # 3. Wait for processing to complete
+            self.logger.info("Waiting for evaluation to complete...")
+            self._wait_task_finished(task_id=task_id)
+
+            # 4. Get evaluation report
+            report = self.get_task_report(task_id)
+            self.logger.info(f"Evaluation completed with status: {report.Status}")
+
+            return report
+        except Exception as e:
+            self.logger.error(f"Retry failed: {e}", exc_info=True)
+            raise e
 
     def _convert_to_case_data_list(
         self,
@@ -285,18 +360,35 @@ class Client:
             GetEvaTaskReportResponse: Evaluation report
         """
         try:
-            # 1. Create evaluation task
-            self.logger.info(f"Creating evaluation task: {task_name}")
-            task_response = self.create_task(
-                dataset_id=dataset_id,
-                dataset_version_id=dataset_version_id,
-                task_name=task_name,
-                ruleset_id=ruleset_id,
-                model_agent_config=target_config,
-            )
-            task_id = task_response.TaskID
+            # 1. Get or Create evaluation task
+            try:
+                task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
+                    WorkspaceID=self.workspace_id, TaskName=task_name
+                ))
+                task_id = task.TaskID
+                if task.ResultTaskStatus.Status in [
+                    eva_types.EvaTaskStatus.FAILED,
+                    eva_types.EvaTaskStatus.CANCELLED,
+                    eva_types.EvaTaskStatus.PARTIAL_SUCCEED,
+                    eva_types.EvaTaskStatus.PAUSED,
+                ]:
+                    self.eva_service.UpdateEvaTask(eva_types.UpdateEvaTaskRequest(
+                        WorkspaceID=self.workspace_id, TaskID=task_id, Status=eva_types.EvaTaskStatus.RUNNING
+                    ))
+            except Exception as e:
+                if "task not found" in str(e):
+                    self.logger.info(f"Creating evaluation task: {task_name}")
+                    task_response = self.create_task(
+                        dataset_id=dataset_id,
+                        dataset_version_id=dataset_version_id,
+                        task_name=task_name,
+                        ruleset_id=ruleset_id,
+                        model_agent_config=target_config,
+                    )
+                    task_id = task_response.TaskID
+                else:
+                    raise e
             self.logger.info(f"Task created successfully: {task_id}")
-
             # 2. Get dataset column information
             self.logger.info("Fetching dataset columns...")
             columns_response = self.list_dataset_columns(dataset_id, dataset_version_id)
@@ -448,11 +540,23 @@ class Client:
             WorkspaceID=self.workspace_id, TaskID=task_id
         )
         task = self.eva_service.GetEvaTask(request)
-        while task.Status not in [
+        while task.ResultTaskStatus.Status not in [
             eva_types.EvaTaskStatus.SUCCEED,
             eva_types.EvaTaskStatus.FAILED,
             eva_types.EvaTaskStatus.CANCELLED,
             eva_types.EvaTaskStatus.PARTIAL_SUCCEED,
+            eva_types.EvaTaskStatus.PAUSED,
+        ]:
+            time.sleep(1)
+            task = self.eva_service.GetEvaTask(request)
+
+    def _wait_task_paused(self, task_id: str):
+        request = eva_types.GetEvaTaskRequest(
+            WorkspaceID=self.workspace_id, TaskID=task_id
+        )
+        task = self.eva_service.GetEvaTask(request)
+        while task.ResultTaskStatus.Status not in [
+            eva_types.EvaTaskStatus.PAUSED,
         ]:
             time.sleep(1)
             task = self.eva_service.GetEvaTask(request)
