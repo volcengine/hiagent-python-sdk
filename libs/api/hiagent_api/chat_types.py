@@ -137,7 +137,7 @@ class GetAppConfigPreviewResponse(BaseSchema):
         validation_alias="OpenMessage",
         default="",
     )
-    open_query: str = Field(
+    open_query: list[str] = Field(
         description="open query",
         validation_alias="OpenQuery",
         default="",
@@ -399,19 +399,35 @@ class StreamingChatEventType(StrEnum):
     think_message_output_start = "think_message_output_start"
     think_message = "think_message"
     think_message_output_end = "think_message_output_end"
+    agent_error = "agent_error"
+    deep_search_think_start = "deep_search_think_start"
+    deep_search_think = "deep_search_think"
+    deep_search_think_end = "deep_search_think_end"
+    deep_search_query_start = "deep_search_query_start"
+    deep_search_query = "deep_search_query"
+    deep_search_query_end = "deep_search_query_end"
+    deep_search_extraction_start = "deep_search_extraction_start"
+    deep_search_extraction = "deep_search_extraction"
+    deep_search_extraction_end = "deep_search_extraction_end"
+    flow_start = "flow_start"
+    flow_end = "flow_end"
 
 
 class ChatEvent(BaseSchema):
     event: str = Field(
+        default="",
         description="event",
     )
     task_id: str = Field(
+        default="",
         description="task id",
     )
     id: str = Field(
+        default="",
         description="id",
     )
     conversation_id: str = Field(
+        default="",
         description="conversation id",
     )
     created_at: int = Field(
@@ -768,6 +784,43 @@ class ThinkMessageChatEvent(ChatEvent):
 
 class ThinkMessageOutputEndChatEvent(ChatEvent): ...
 
+class AgentErrorChatEvent(ChatEvent):
+    error_msg: str = Field(
+        description="error message",
+    )
+
+class DeepSearchThinkStartChatEvent(ChatEvent): ...
+
+class DeepSearchThinkChatEvent(ChatEvent):
+    content: str = Field(
+        description="think content",
+    )
+
+class DeepSearchThinkEndChatEvent(ChatEvent): ...
+
+class DeepSearchQueryStartChatEvent(ChatEvent): ...
+
+class DeepSearchQueryChatEvent(ChatEvent):
+    content: str = Field(
+        description="query content",
+    )
+
+class DeepSearchQueryEndChatEvent(ChatEvent): ...
+
+class DeepSearchExtractionStartChatEvent(ChatEvent): ...
+
+class DeepSearchExtractionChatEvent(ChatEvent):
+    content: str = Field(
+        description="extraction content",
+    )
+
+class DeepSearchExtractionEndChatEvent(ChatEvent): ...
+
+class FlowStartChatEvent(ChatEvent):
+    run_id: str
+
+class FlowEndChatEvent(ChatEvent):
+    run_id: str
 
 class ChatAgainRequest(BaseSchema):
     app_key: str = Field(
