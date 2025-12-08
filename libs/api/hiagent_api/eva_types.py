@@ -42,6 +42,8 @@ class EvaTaskStatus(str, Enum):
     FAILED = "Failed"  # Failed
     CANCELLING = "Cancelling"  # Cancelling
     CANCELLED = "Cancelled"  # Task cancelled
+    PAUSED = "Paused"  # Task paused
+    PAUSING = "Pausing"  # Task pausing
 
 
 # New CellContent related types
@@ -921,6 +923,36 @@ class EvaTaskItemTarget(BaseModel):
         title="Is Deleted", description="Whether it has been deleted"
     )
 
+class EvaTaskStatusItem(BaseModel):
+    """Task status item"""
+    StartedAt: Optional[str] = Field(
+        default=None, title="Task Start Time", description="Task start time"
+    )
+    CompletedAt: Optional[str] = Field(
+        default=None, title="Task End Time", description="Task end time"
+    )
+    Duration: int = Field(
+        title="Task Execution Duration",
+        description="Task execution duration in milliseconds",
+    )
+    CostTokens: Optional[int] = Field(
+        default=None,
+        title="Task Completion Token Cost",
+        description="Tokens consumed for task completion",
+    )
+    Progress: Optional[EvaTaskItemProgress] = Field(
+        default=None, title="Task Progress", description="Task progress"
+    )
+    Status: EvaTaskStatus = Field(title="Task Status", description="Task status")
+    StatusMessage: Optional[str] = Field(
+        default=None,
+        title="Task Status Description",
+        description="Task status description",
+    )
+class EmptyResponse(BaseModel):
+    """EEmpty response"""
+
+    pass
 
 class EvaTaskItem(BaseModel):
     """Evaluation task details"""
@@ -947,30 +979,7 @@ class EvaTaskItem(BaseModel):
         title="Task Evaluation Targets",
         description="Task evaluation targets",
     )
-    StartedAt: Optional[str] = Field(
-        default=None, title="Task Start Time", description="Task start time"
-    )
-    CompletedAt: Optional[str] = Field(
-        default=None, title="Task End Time", description="Task end time"
-    )
-    Duration: int = Field(
-        title="Task Execution Duration",
-        description="Task execution duration in milliseconds",
-    )
-    CostTokens: Optional[int] = Field(
-        default=None,
-        title="Task Completion Token Cost",
-        description="Tokens consumed for task completion",
-    )
-    Progress: Optional[EvaTaskItemProgress] = Field(
-        default=None, title="Task Progress", description="Task progress"
-    )
-    Status: EvaTaskStatus = Field(title="Task Status", description="Task status")
-    StatusMessage: Optional[str] = Field(
-        default=None,
-        title="Task Status Description",
-        description="Task status description",
-    )
+    ResultTaskStatus: EvaTaskStatusItem = Field(title="Task Result Status", description="Task Result Status")
     CreatedAt: str = Field(title="Created At", description="Creation time")
     UpdatedAt: str = Field(title="Updated At", description="Update time")
     CreatedBy: str = Field(title="Created By", description="Creator")
@@ -989,6 +998,41 @@ class GetEvaTaskRequest(BaseModel):
 
 # GetEvaTaskResponse 就是 EvaTaskItem
 GetEvaTaskResponse = EvaTaskItem
+
+class UpdateEvaTaskRequest(BaseModel):
+    """Update evaluation task request"""
+
+    WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    TaskID: str = Field(title="Task ID", description="Task ID")
+    Description: Optional[str] = Field(
+        default=None, title="Task Description", description="Task Description"
+    )
+    Status: Optional[EvaTaskStatus] = Field(
+        default=None, title="Task Status", description="Task Status"
+    )
+
+class DeleteEvaTaskRequest(BaseModel):
+    """Delete evaluation task request"""
+
+    WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    TaskID: str = Field(title="Task ID", description="Task ID")
+
+class PauseEvaTaskRequest(BaseModel):
+    """Pause evaluation task request"""
+
+    WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    TaskID: str = Field(title="Task ID", description="Task ID")
+
+class RetryOption(BaseModel):
+    """Retry evaluation task option"""
+    ResultEvaluate: bool = Field(title="Retry Rule Evaluate", description="Retry Rule Evaluate")
+
+class RetryEvaTaskRequest(BaseModel):
+    """Retry evaluation task request"""
+
+    WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    TaskID: str = Field(title="Task ID", description="Task ID")
+    Option: RetryOption = Field(title="Retry Option", description="Retry Option")
 
 
 class ListColumnsResponse(BaseModel):

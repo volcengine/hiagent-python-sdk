@@ -124,6 +124,34 @@ class EvaService(Service):
                 {},
                 {},
             ),
+            "PauseEvaTask": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "PauseEvaTask", "Version": "2025-02-01"},
+                {},
+                {},
+            ),
+            "DeleteEvaTask": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "DeleteEvaTask", "Version": "2025-02-01"},
+                {},
+                {},
+            ),
+            "RetryEvaTask": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "RetryEvaTask", "Version": "2025-02-01"},
+                {},
+                {},
+            ),
+            "UpdateEvaTask": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "UpdateEvaTask", "Version": "2025-02-01"},
+                {},
+                {},
+            ),
         }
         return api_info
 
@@ -217,6 +245,66 @@ class EvaService(Service):
             self.__request("GetEvaTask", request.model_dump())
         )
 
+    def PauseEvaTask(
+        self, request: eva_types.PauseEvaTaskRequest
+    ) -> eva_types.EmptyResponse:
+        """Pause evaluation task
+
+        Args:
+            request: Pause evaluation task request parameters
+
+        Returns:
+            EmptyResponse: Operation response
+        """
+        return eva_types.EmptyResponse.model_validate(
+            self.__request("PauseEvaTask", request.model_dump())
+        )
+
+    def DeleteEvaTask(
+        self, request: eva_types.DeleteEvaTaskRequest
+    ) -> eva_types.EmptyResponse:
+        """Delete evaluation task
+
+        Args:
+            request: Delete evaluation task request parameters
+
+        Returns:
+            EmptyResponse: Operation response
+        """
+        return eva_types.EmptyResponse.model_validate(
+            self.__request("DeleteEvaTask", request.model_dump())
+        )
+
+    def RetryEvaTask(
+        self, request: eva_types.RetryEvaTaskRequest
+    ) -> eva_types.EmptyResponse:
+        """Retry evaluation task
+
+        Args:
+            request: Retry evaluation task request parameters
+
+        Returns:
+            EmptyResponse: Operation response
+        """
+        return eva_types.EmptyResponse.model_validate(
+            self.__request("RetryEvaTask", request.model_dump())
+        )
+
+    def UpdateEvaTask(
+        self, request: eva_types.UpdateEvaTaskRequest
+    ) -> eva_types.EmptyResponse:
+        """Update evaluation task
+
+        Args:
+            request: Update evaluation task request parameters
+
+        Returns:
+            EmptyResponse: Operation response
+        """
+        return eva_types.EmptyResponse.model_validate(
+            self.__request("UpdateEvaTask", request.model_dump())
+        )
+
     def CreateEvaRuleset(
         self, params: eva_types.CreateEvaRulesetRequest
     ) -> eva_types.CreateEvaRulesetResponse:
@@ -305,6 +393,7 @@ class EvaService(Service):
                             logger.debug(
                                 f"Error code: {error_info.get('Code', 'N/A')}, Message: {error_info.get('Message', 'N/A')}"
                             )
+                            Exception(f"Error code: {error_info.get('Code', 'N/A')}, Message: {error_info.get('Message', 'N/A')}")
             except Exception:
                 pass
 
