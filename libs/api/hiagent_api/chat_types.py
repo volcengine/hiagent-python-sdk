@@ -824,6 +824,7 @@ class GetConversationListResponse(BaseSchema):
         default=[],
     )
 
+
 class GetConversationInputsRequest(BaseSchema):
     app_key: str = Field(
         description="app key",
@@ -2008,6 +2009,7 @@ class TriggerConfig(BaseSchema):
         default=[],
     )
 
+
 class TriggerRunRecord(BaseSchema):
     run_id: str = Field(
         description="run id",
@@ -2066,4 +2068,73 @@ class QueryTriggerRunRecordsResponse(BaseSchema):
         description="trigger records",
         validation_alias="records",
         default=[],
+    )
+
+
+class GetOpeningConfigOpenRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    user_type: Optional[str] = Field(
+        description="user type, App:openapi user;IAM:hiagent user;Visitor:web user;Lark:lark user;Wechat: wechat user",
+        serialization_alias="UserType",
+        default=None,
+    )
+    app_conversation_id: str = Field(
+        description="conversation id",
+        serialization_alias="AppConversationID",
+        default="",
+    )
+
+
+class OpeningConfig(BaseSchema):
+    opening_text: Optional[str] = Field(
+        description="opening text",
+        validation_alias="OpeningText",
+        default="",
+    )
+    opening_questions: list[str] = Field(
+        description="opening questions",
+        validation_alias="OpeningQuestions",
+        default=[],
+    )
+    opening_enabled: bool = Field(
+        description="opening enabled",
+        validation_alias="OpeningEnabled",
+        default=False,
+    )
+
+
+class GetOpeningConfigOpenResponse(BaseSchema):
+    opening_config: Optional[OpeningConfig] = Field(
+        description="opening config",
+        validation_alias="OpeningConfig",
+        default=None,
+    )
+
+
+class QueryAppMessageOauthStatusOpenRequest(BaseSchema):
+    app_key: str = Field(
+        description="app key",
+        serialization_alias="AppKey",
+    )
+    user_id: str = Field(
+        description="user id",
+        serialization_alias="UserID",
+    )
+    message_id: str = Field(
+        description="message id",
+        serialization_alias="MessageID",
+    )
+
+
+class QueryAppMessageOauthStatusResponse(BaseSchema):
+    status: str = Field(
+        description="status: NOT_FOUND, PROCESSING, SUCCEED, STOPPED, FINISHED",
+        validation_alias="Status"
     )

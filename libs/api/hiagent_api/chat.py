@@ -75,7 +75,8 @@ from hiagent_api.chat_types import (
     ToolMessageOutputStartWorkflowEvent, ToolMessageWorkflowEvent, FlowCostWorkflowEvent, FlowInterruptedWorkflowEvent,
     MessageOutputStartWorkflowEvent, MessageOutputEndWorkflowEvent, MessageWorkflowEvent, GetAppUserVariablesRequest,
     GetAppUserVariablesResponse, SetAppUserVariablesRequest, QueryTriggerRunRecordsRequest,
-    QueryTriggerRunRecordsResponse,
+    QueryTriggerRunRecordsResponse, GetOpeningConfigOpenRequest, GetOpeningConfigOpenResponse,
+    QueryAppMessageOauthStatusOpenRequest, QueryAppMessageOauthStatusResponse
 )
 
 
@@ -845,6 +846,46 @@ class ChatService(Service, AppAPIMixin):
         return QueryTriggerRunRecordsResponse.model_validate_json(
             await self._apost(
                 app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def query_message_oauth_status(
+            self, app_key: str, req: QueryAppMessageOauthStatusOpenRequest
+    ) -> QueryAppMessageOauthStatusResponse:
+        return QueryAppMessageOauthStatusResponse.model_validate_json(
+            self._post(
+                app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aquery_message_oauth_status(
+            self, app_key: str, req: QueryAppMessageOauthStatusOpenRequest
+    ) -> QueryAppMessageOauthStatusResponse:
+        return QueryAppMessageOauthStatusResponse.model_validate_json(
+            await self._apost(
+                app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    def get_opening_config(
+            self, app_key: str, req: GetOpeningConfigOpenRequest
+    ) -> GetOpeningConfigOpenResponse:
+        return GetOpeningConfigOpenResponse.model_validate_json(
+            self._post(
+                app_key, "get_opening_config", req.model_dump(by_alias=True)
+            ),
+            by_alias=True,
+        )
+
+    async def aget_opening_config(
+            self, app_key: str, req: GetOpeningConfigOpenRequest
+    ) -> GetOpeningConfigOpenResponse:
+        return GetOpeningConfigOpenResponse.model_validate_json(
+            await self._apost(
+                app_key, "get_opening_config", req.model_dump(by_alias=True)
             ),
             by_alias=True,
         )
