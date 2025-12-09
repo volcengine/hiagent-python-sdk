@@ -21,24 +21,72 @@ from volcengine.ServiceInfo import ServiceInfo
 
 from hiagent_api.base import AppAPIMixin, Service
 from hiagent_api.chat_types import (
+    AgentErrorChatEvent,
     AgentIntentionChatEvent,
     AgentJumpChatEvent,
     AgentTakeOverChatEvent,
     AgentThoughtChatEvent,
     AgentThoughtEndChatEvent,
     AgentThoughtUpdateChatEvent,
+    AsyncResumeAppWorkflowRequest,
+    AsyncResumeAppWorkflowResponse,
     BlockingChatResponse,
+    CancelConversationTopRequest,
+    ChatAgainRequest,
+    ChatContinueRequest,
     ChatEvent,
     ChatRequest,
+    ClearLongMemoryRequest,
+    ClearMessageRequest,
     CreateConversationRequest,
     CreateConversationResponse,
+    DeepSearchExtractionChatEvent,
+    DeepSearchExtractionEndChatEvent,
+    DeepSearchExtractionStartChatEvent,
+    DeepSearchQueryChatEvent,
+    DeepSearchQueryEndChatEvent,
+    DeepSearchQueryStartChatEvent,
+    DeepSearchThinkChatEvent,
+    DeepSearchThinkEndChatEvent,
+    DeepSearchThinkStartChatEvent,
+    DeleteConversationRequest,
+    DeleteLongMemoryRequest,
+    DeleteMessageRequest,
+    EmptyResponse,
+    EventTriggerWebhookResponse,
+    FeedbackRequest,
+    FlowCostWorkflowEvent,
+    FlowEndChatEvent,
+    FlowEndWorkflowEvent,
+    FlowErrorWorkflowEvent,
+    FlowInterruptedWorkflowEvent,
+    FlowStartChatEvent,
+    FlowStartWorkflowEvent,
     GetAppConfigPreviewRequest,
     GetAppConfigPreviewResponse,
+    GetAppUserVariablesRequest,
+    GetAppUserVariablesResponse,
+    GetConversationInputsRequest,
+    GetConversationInputsResponse,
+    GetConversationListRequest,
+    GetConversationListResponse,
+    GetConversationMessageRequest,
+    GetConversationMessageResponse,
+    GetMessageInfoRequest,
+    GetMessageInfoResponse,
+    GetOpeningConfigOpenRequest,
+    GetOpeningConfigOpenResponse,
+    GetSuggestedQuestionsRequest,
+    GetSuggestedQuestionsResponse,
     InterruptedChatEvent,
     KnowledgeGraphRetrieveChatEvent,
     KnowledgeGraphRetrieveEndChatEvent,
     KnowledgeRetrieveChatEvent,
     KnowledgeRetrieveEndChatEvent,
+    ListLongMemoryRequest,
+    ListLongMemoryResponse,
+    ListOauth2TokenRequest,
+    ListOauth2TokenResponse,
     LongTermMemoryRetrieveChatEvent,
     LongTermMemoryRetrieveEndChatEvent,
     MessageChatEvent,
@@ -46,12 +94,34 @@ from hiagent_api.chat_types import (
     MessageEndChatEvent,
     MessageFailedChatEvent,
     MessageOutputEndChatEvent,
+    MessageOutputEndWorkflowEvent,
     MessageOutputStartChatEvent,
+    MessageOutputStartWorkflowEvent,
     MessageStartChatEvent,
+    MessageWorkflowEvent,
     QARetrieveChatEvent,
+    QueryAppMessageOauthStatusOpenRequest,
+    QueryAppMessageOauthStatusResponse,
+    QueryAppSkillAsyncTaskRequest,
+    QueryAppSkillAsyncTaskResponse,
+    QueryRunAppProcessRequest,
+    QueryRunAppProcessResponse,
+    QueryTriggerRunRecordsRequest,
+    QueryTriggerRunRecordsResponse,
+    RunAppWorkflowRequest,
+    RunAppWorkflowResponse,
+    SetAppUserVariablesRequest,
+    SetConversationTopRequest,
+    SetMessageAnswerUsedRequest,
+    StopMessageRequest,
     StreamingChatEventType,
+    StreamingWorkflowEventType,
     SuggestionChatEvent,
     SuggestionCostChatEvent,
+    SyncResumeAppWorkflowRequest,
+    SyncResumeAppWorkflowResponse,
+    SyncRunAppWorkflowRequest,
+    SyncRunAppWorkflowResponse,
     TerminologyRetrieveChatEvent,
     TerminologyRetrieveEndChatEvent,
     ThinkMessageChatEvent,
@@ -59,24 +129,13 @@ from hiagent_api.chat_types import (
     ThinkMessageOutputStartChatEvent,
     ToolMessageChatEvent,
     ToolMessageOutputEndChatEvent,
+    ToolMessageOutputEndWorkflowEvent,
     ToolMessageOutputStartChatEvent,
-    ChatAgainRequest, GetConversationListRequest, GetConversationListResponse, GetConversationInputsRequest,
-    GetConversationInputsResponse, UpdateConversationRequest, EmptyResponse, DeleteConversationRequest,
-    StopMessageRequest, ClearMessageRequest, GetConversationMessageRequest, GetConversationMessageResponse,
-    GetMessageInfoRequest, GetMessageInfoResponse, DeleteMessageRequest, FeedbackRequest, SetMessageAnswerUsedRequest,
-    GetSuggestedQuestionsRequest, GetSuggestedQuestionsResponse, RunAppWorkflowRequest, RunAppWorkflowResponse,
-    SyncRunAppWorkflowRequest, SyncRunAppWorkflowResponse, QueryRunAppProcessRequest, QueryRunAppProcessResponse,
-    ListOauth2TokenRequest, ListOauth2TokenResponse, EventTriggerWebhookResponse, ChatContinueRequest,
-    ListLongMemoryRequest, ListLongMemoryResponse, UpdateLongMemoryRequest, DeleteLongMemoryRequest,
-    ClearLongMemoryRequest, AsyncResumeAppWorkflowRequest, AsyncResumeAppWorkflowResponse, SetConversationTopRequest,
-    CancelConversationTopRequest, QueryAppSkillAsyncTaskRequest, QueryAppSkillAsyncTaskResponse,
-    SyncResumeAppWorkflowRequest, SyncResumeAppWorkflowResponse, WorkflowEvent, StreamingWorkflowEventType,
-    FlowStartWorkflowEvent, FlowEndWorkflowEvent, FlowErrorWorkflowEvent, ToolMessageOutputEndWorkflowEvent,
-    ToolMessageOutputStartWorkflowEvent, ToolMessageWorkflowEvent, FlowCostWorkflowEvent, FlowInterruptedWorkflowEvent,
-    MessageOutputStartWorkflowEvent, MessageOutputEndWorkflowEvent, MessageWorkflowEvent, GetAppUserVariablesRequest,
-    GetAppUserVariablesResponse, SetAppUserVariablesRequest, QueryTriggerRunRecordsRequest,
-    QueryTriggerRunRecordsResponse, GetOpeningConfigOpenRequest, GetOpeningConfigOpenResponse,
-    QueryAppMessageOauthStatusOpenRequest, QueryAppMessageOauthStatusResponse
+    ToolMessageOutputStartWorkflowEvent,
+    ToolMessageWorkflowEvent,
+    UpdateConversationRequest,
+    UpdateLongMemoryRequest,
+    WorkflowEvent,
 )
 
 
@@ -957,6 +1016,30 @@ def parse_chat_event(event_data: dict) -> Optional[ChatEvent]:
             return ThinkMessageOutputEndChatEvent.model_validate(event_data)
         case StreamingChatEventType.think_message:
             return ThinkMessageChatEvent.model_validate(event_data)
+        case StreamingChatEventType.agent_error:
+            return AgentErrorChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_think_start:
+            return DeepSearchThinkStartChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_think_end:
+            return DeepSearchThinkEndChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_think:
+            return DeepSearchThinkChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_query_start:
+            return DeepSearchQueryStartChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_query_end:
+            return DeepSearchQueryEndChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_query:
+            return DeepSearchQueryChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_extraction_start:
+            return DeepSearchExtractionStartChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_extraction_end:
+            return DeepSearchExtractionEndChatEvent.model_validate(event_data)
+        case StreamingChatEventType.deep_search_extraction:
+            return DeepSearchExtractionChatEvent.model_validate(event_data)
+        case StreamingChatEventType.flow_start:
+            return FlowStartChatEvent.model_validate(event_data)
+        case StreamingChatEventType.flow_end:
+            return FlowEndChatEvent.model_validate(event_data)
 
     return None
 
