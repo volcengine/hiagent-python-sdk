@@ -505,7 +505,7 @@ wheels = [
 
 [[package]]
 name = "hiagent-api"
-version = "2.3.0"
+version = "2.4.0"
 source = { editable = "libs/api" }
 dependencies = [
     { name = "aiofiles" },
@@ -538,7 +538,7 @@ dev = [{ name = "dotenv", specifier = ">=0.9.9" }]
 
 [[package]]
 name = "hiagent-components"
-version = "2.0.1"
+version = "2.0.2"
 source = { editable = "libs/components" }
 dependencies = [
     { name = "hiagent-api" },
@@ -577,7 +577,7 @@ integrations = [
 
 [[package]]
 name = "hiagent-eva"
-version = "2.3.0"
+version = "2.4.0"
 source = { editable = "libs/eva" }
 dependencies = [
     { name = "hiagent-api" },
