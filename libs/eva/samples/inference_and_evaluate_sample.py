@@ -96,11 +96,11 @@ def main():
 
     try:
         # Run evaluation
-        print("Starting evaluation...")
+        print("Starting inference and evaluation...")
         print(f"Dataset ID: {dataset_id}")
         print(f"Dataset Version ID: {dataset_version_id}")
         print(f"Ruleset ID: {ruleset_id}")
-        report = provider.run_evaluation(
+        report = provider.run_inference_and_evaluation(
             dataset_id=dataset_id,
             dataset_version_id=dataset_version_id,
             task_name=task_name,

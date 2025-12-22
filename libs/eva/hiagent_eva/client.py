@@ -273,7 +273,7 @@ class Client:
             self.logger.error(f"Delete failed: {e}", exc_info=True)
             raise e
 
-    def retry_task(self, task_name: str) -> eva_types.GetEvaTaskReportResponse:
+    def run_evaluation(self, task_name: str) -> eva_types.GetEvaTaskReportResponse:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
         try:
@@ -282,7 +282,7 @@ class Client:
                 WorkspaceID=self.workspace_id, TaskName=task_name
             ))
             task_id = task.TaskID
-            # 2. Retry task
+            # 2. Retry task rule evaludation
             request = eva_types.RetryEvaTaskRequest(
                 WorkspaceID=self.workspace_id,
                 TaskID=task_id,
@@ -332,7 +332,7 @@ class Client:
 
         return case_data_list
 
-    def run_evaluation(
+    def run_inference_and_evaluation(
         self,
         dataset_id: str,
         dataset_version_id: str,
