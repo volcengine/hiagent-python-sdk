@@ -58,8 +58,8 @@ def main():
 
     try:
         # Run evaluation
-        print("Starting retry...")
-        report = provider.retry_task(task_name)
+        print("Starting evaluation...")
+        report = provider.run_evaluation(task_name)
         # Print results
         print("\n✓ Evaluation completed!")
         print(f"   Task Name: {task_name}")
