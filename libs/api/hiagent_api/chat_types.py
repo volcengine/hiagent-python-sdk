@@ -140,7 +140,7 @@ class GetAppConfigPreviewResponse(BaseSchema):
     open_query: list[str] = Field(
         description="open query",
         validation_alias="OpenQuery",
-        default="",
+        default=[],
     )
     icon: str = Field(
         description="icon",
