@@ -140,7 +140,7 @@ class GetAppConfigPreviewResponse(BaseSchema):
     open_query: list[str] = Field(
         description="open query",
         validation_alias="OpenQuery",
-        default="",
+        default=[],
     )
     icon: str = Field(
         description="icon",
@@ -1187,10 +1187,10 @@ class GetSuggestedQuestionsRequest(BaseSchema):
 
 
 class GetSuggestedQuestionsResponse(BaseSchema):
-    suggested_questions: list[str] = Field(
+    suggested_questions: Optional[list[str]] = Field(
         description="suggested questions",
         validation_alias="SuggestedQuestions",
-        default=[],
+        default=None,
     )
 
 
