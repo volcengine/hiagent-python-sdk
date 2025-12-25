@@ -1187,10 +1187,10 @@ class GetSuggestedQuestionsRequest(BaseSchema):
 
 
 class GetSuggestedQuestionsResponse(BaseSchema):
-    suggested_questions: list[str] = Field(
+    suggested_questions: Optional[list[str]] = Field(
         description="suggested questions",
         validation_alias="SuggestedQuestions",
-        default=[],
+        default=None,
     )
 
 
