@@ -19,6 +19,65 @@ from strenum import StrEnum
 from hiagent_api.base import BaseSchema
 
 
+class ErrorData(BaseSchema):
+    code: str = Field(
+        description="error code",
+        validation_alias="Code",
+        default="",
+    )
+    message: str = Field(
+        description="error message",
+        validation_alias="Message",
+        default="",
+    )
+    data: Optional[dict[str, str]] = Field(
+        description="error data",
+        validation_alias="Data",
+        default=None,
+    )
+
+
+class ResponseMetadata(BaseSchema):
+    requestID: str = Field(
+        description="request id",
+        validation_alias="RequestId",
+        default=""
+    )
+    action: str = Field(
+        description="action",
+        validation_alias="Action",
+        default="",
+    )
+    version: str = Field(
+        description="version",
+        validation_alias="Version",
+        default="",
+    )
+    service: str = Field(
+        description="service",
+        validation_alias="Service",
+        default="",
+    )
+    region: str = Field(
+        description="region",
+        validation_alias="Region",
+        default="",
+    )
+    error: Optional[ErrorData] = Field(
+        description="error",
+        validation_alias="Error",
+        default=None,
+    )
+
+
+class BaseError(BaseSchema):
+    response_metadata: Optional[ResponseMetadata] = Field(
+        description="response metadata",
+        validation_alias="ResponseMetadata",
+        default=None,
+    )
+
+
 class CreateConversationRequest(BaseSchema):
     app_key: str = Field(
         description="app key",
@@ -785,43 +844,56 @@ class ThinkMessageChatEvent(ChatEvent):
 
 class ThinkMessageOutputEndChatEvent(ChatEvent): ...
 
+
 class AgentErrorChatEvent(ChatEvent):
     error_msg: str = Field(
         description="error message",
     )
 
+
 class DeepSearchThinkStartChatEvent(ChatEvent): ...
+
 
 class DeepSearchThinkChatEvent(ChatEvent):
     content: str = Field(
         description="think content",
     )
 
+
 class DeepSearchThinkEndChatEvent(ChatEvent): ...
 
+
 class DeepSearchQueryStartChatEvent(ChatEvent): ...
+
 
 class DeepSearchQueryChatEvent(ChatEvent):
     content: str = Field(
         description="query content",
     )
 
+
 class DeepSearchQueryEndChatEvent(ChatEvent): ...
 
+
 class DeepSearchExtractionStartChatEvent(ChatEvent): ...
+
 
 class DeepSearchExtractionChatEvent(ChatEvent):
     content: str = Field(
         description="extraction content",
     )
 
+
 class DeepSearchExtractionEndChatEvent(ChatEvent): ...
+
 
 class FlowStartChatEvent(ChatEvent):
     run_id: str
 
+
 class FlowEndChatEvent(ChatEvent):
     run_id: str
+
 
 class ChatAgainRequest(BaseSchema):
     app_key: str = Field(

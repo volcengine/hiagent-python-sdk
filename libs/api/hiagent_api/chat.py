@@ -20,6 +20,7 @@ from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
 from hiagent_api.base import AppAPIMixin, Service
+
 from hiagent_api.chat_types import (
     AgentErrorChatEvent,
     AgentIntentionChatEvent,
@@ -31,6 +32,7 @@ from hiagent_api.chat_types import (
     AsyncResumeAppWorkflowRequest,
     AsyncResumeAppWorkflowResponse,
     BlockingChatResponse,
+    BaseError,
     CancelConversationTopRequest,
     ChatAgainRequest,
     ChatContinueRequest,
@@ -163,13 +165,17 @@ class ChatService(Service, AppAPIMixin):
         return service_info
 
     @staticmethod
+    def IsErrorResult(json_str: str) -> bool:
+        return "ResponseMetadata" in json_str and "Code" in json_str and "Error" in json_str
+
+    @staticmethod
     def get_api_info() -> dict[str, ApiInfo]:
         api_info = {}
         return api_info
 
     def create_conversation(
             self, app_key: str, conversation: CreateConversationRequest
-    ) -> CreateConversationResponse:
+    ) -> CreateConversationResponse | BaseError:
         """创建会话
         Args:
             app_key: app key
@@ -178,16 +184,21 @@ class ChatService(Service, AppAPIMixin):
         Returns:
             CreateConversationResponse
         """
+
+        result = self._post(
+            app_key, "create_conversation", conversation.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return CreateConversationResponse.model_validate_json(
-            self._post(
-                app_key, "create_conversation", conversation.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def acreate_conversation(
             self, app_key: str, conversation: CreateConversationRequest
-    ) -> CreateConversationResponse:
+    ) -> CreateConversationResponse | BaseError:
         """创建会话
         Args:
             app_key: app key
@@ -196,47 +207,62 @@ class ChatService(Service, AppAPIMixin):
         Returns:
             CreateConversationResponse
         """
+
+        result = await self._apost(
+            app_key, "create_conversation", conversation.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return CreateConversationResponse.model_validate_json(
-            await self._apost(
-                app_key, "create_conversation", conversation.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_app(
             self, app_key: str, params: GetAppConfigPreviewRequest
-    ) -> GetAppConfigPreviewResponse:
+    ) -> GetAppConfigPreviewResponse | BaseError:
+        result = self._post(
+            app_key, "get_app_config_preview", params.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetAppConfigPreviewResponse.model_validate_json(
-            self._post(
-                app_key, "get_app_config_preview", params.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_app(
             self, app_key: str, params: GetAppConfigPreviewRequest
-    ) -> GetAppConfigPreviewResponse:
+    ) -> GetAppConfigPreviewResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_app_config_preview", params.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetAppConfigPreviewResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_app_config_preview", params.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
-    def chat_blocking(self, app_key: str, chat: ChatRequest) -> BlockingChatResponse:
+    def chat_blocking(self, app_key: str, chat: ChatRequest) -> BlockingChatResponse | BaseError:
         chat.response_mode = "blocking"
         res = self._post(app_key, "chat_query_v2", chat.model_dump(by_alias=True))
-
+        if ChatService.IsErrorResult(res):
+            return BaseError.model_validate_json(res, by_alias=True)
         return BlockingChatResponse.model_validate_json(res, by_alias=True)
 
     async def achat_blocking(
             self, app_key: str, chat: ChatRequest
-    ) -> BlockingChatResponse:
+    ) -> BlockingChatResponse | BaseError:
         chat.response_mode = "blocking"
         res = await self._apost(
             app_key, "chat_query_v2", chat.model_dump(by_alias=True)
         )
-
+        if ChatService.IsErrorResult(res):
+            return BaseError.model_validate_json(res, by_alias=True)
         return BlockingChatResponse.model_validate_json(res, by_alias=True)
 
     def chat_streaming(
@@ -287,343 +313,479 @@ class ChatService(Service, AppAPIMixin):
 
     def get_conversation_list(
             self, app_key: str, req: GetConversationListRequest
-    ) -> GetConversationListResponse:
+    ) -> GetConversationListResponse | BaseError:
+        result = self._post(
+            app_key, "get_conversation_list", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationListResponse.model_validate_json(
-            self._post(
-                app_key, "get_conversation_list", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_conversation_list(
             self, app_key: str, req: GetConversationListRequest
-    ) -> GetConversationListResponse:
+    ) -> GetConversationListResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_conversation_list", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationListResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_conversation_list", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_conversation_inputs(
             self, app_key: str, req: GetConversationInputsRequest
-    ) -> GetConversationInputsResponse:
+    ) -> GetConversationInputsResponse | BaseError:
+        result = self._post(
+            app_key, "get_conversation_inputs", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationInputsResponse.model_validate_json(
-            self._post(
-                app_key, "get_conversation_inputs", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_conversation_inputs(
             self, app_key: str, req: GetConversationInputsRequest
-    ) -> GetConversationInputsResponse:
+    ) -> GetConversationInputsResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_conversation_inputs", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationInputsResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_conversation_inputs", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def update_conversation(
             self, app_key: str, req: UpdateConversationRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "update_conversation", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "update_conversation", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aupdate_conversation(
             self, app_key: str, req: UpdateConversationRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "update_conversation", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "update_conversation", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def delete_conversation(
             self, app_key: str, req: DeleteConversationRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "delete_conversation", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "delete_conversation", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def adelete_conversation(
             self, app_key: str, req: DeleteConversationRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "delete_conversation", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "delete_conversation", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def stop_message(
             self, app_key: str, req: StopMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "stop_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "stop_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def astop_message(
             self, app_key: str, req: StopMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "stop_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "stop_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def clear_message(
             self, app_key: str, req: ClearMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "clear_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "clear_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aclear_message(
             self, app_key: str, req: ClearMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "clear_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "clear_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_conversation_messages(
             self, app_key: str, req: GetConversationMessageRequest
-    ) -> GetConversationMessageResponse:
+    ) -> GetConversationMessageResponse | BaseError:
+        result = self._post(
+            app_key, "get_conversation_messages", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationMessageResponse.model_validate_json(
-            self._post(
-                app_key, "get_conversation_messages", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_conversation_messages(
             self, app_key: str, req: GetConversationMessageRequest
-    ) -> GetConversationMessageResponse:
+    ) -> GetConversationMessageResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_conversation_messages", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetConversationMessageResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_conversation_messages", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_message_info(
             self, app_key: str, req: GetMessageInfoRequest
-    ) -> GetMessageInfoResponse:
+    ) -> GetMessageInfoResponse | BaseError:
+        result = self._post(
+            app_key, "get_message_info", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetMessageInfoResponse.model_validate_json(
-            self._post(
-                app_key, "get_message_info", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_message_info(
             self, app_key: str, req: GetMessageInfoRequest
-    ) -> GetMessageInfoResponse:
+    ) -> GetMessageInfoResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_message_info", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetMessageInfoResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_message_info", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def delete_message(
             self, app_key: str, req: DeleteMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "delete_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "delete_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def adelete_message(
             self, app_key: str, req: DeleteMessageRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "delete_message", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "delete_message", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def feedback(
             self, app_key: str, req: FeedbackRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "feedback", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "feedback", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def afeedback(
             self, app_key: str, req: FeedbackRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "feedback", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "feedback", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def set_message_answer_used(
             self, app_key: str, req: SetMessageAnswerUsedRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "set_message_answer_used", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "set_message_answer_used", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aset_message_answer_used(
             self, app_key: str, req: SetMessageAnswerUsedRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "set_message_answer_used", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "set_message_answer_used", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_suggested_questions(
             self, app_key: str, req: GetSuggestedQuestionsRequest
-    ) -> GetSuggestedQuestionsResponse:
+    ) -> GetSuggestedQuestionsResponse | BaseError:
+        result = self._post(
+            app_key, "get_suggested_questions", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetSuggestedQuestionsResponse.model_validate_json(
-            self._post(
-                app_key, "get_suggested_questions", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_suggested_questions(
             self, app_key: str, req: GetSuggestedQuestionsRequest
-    ) -> GetSuggestedQuestionsResponse:
+    ) -> GetSuggestedQuestionsResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_suggested_questions", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetSuggestedQuestionsResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_suggested_questions", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def run_app_workflow(
             self, app_key: str, req: RunAppWorkflowRequest
-    ) -> RunAppWorkflowResponse:
+    ) -> RunAppWorkflowResponse | BaseError:
+        result = self._post(
+            app_key, "run_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return RunAppWorkflowResponse.model_validate_json(
-            self._post(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def arun_app_workflow(
             self, app_key: str, req: RunAppWorkflowRequest
-    ) -> RunAppWorkflowResponse:
+    ) -> RunAppWorkflowResponse | BaseError:
+        result = await self._apost(
+            app_key, "run_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return RunAppWorkflowResponse.model_validate_json(
-            await self._apost(
-                app_key, "run_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def sync_run_app_workflow(
             self, app_key: str, req: SyncRunAppWorkflowRequest
-    ) -> SyncRunAppWorkflowResponse:
+    ) -> SyncRunAppWorkflowResponse | BaseError:
+        result = self._post(
+            app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return SyncRunAppWorkflowResponse.model_validate_json(
-            self._post(
-                app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def async_run_app_workflow(
             self, app_key: str, req: SyncRunAppWorkflowRequest
-    ) -> SyncRunAppWorkflowResponse:
+    ) -> SyncRunAppWorkflowResponse | BaseError:
+        result = await self._apost(
+            app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return SyncRunAppWorkflowResponse.model_validate_json(
-            await self._apost(
-                app_key, "sync_run_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def query_run_app_process(
             self, app_key: str, req: QueryRunAppProcessRequest
-    ) -> QueryRunAppProcessResponse:
+    ) -> QueryRunAppProcessResponse | BaseError:
+        result = self._post(
+            app_key, "query_run_app_process", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryRunAppProcessResponse.model_validate_json(
-            self._post(
-                app_key, "query_run_app_process", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aquery_run_app_process(
             self, app_key: str, req: QueryRunAppProcessRequest
-    ) -> QueryRunAppProcessResponse:
+    ) -> QueryRunAppProcessResponse | BaseError:
+        result = await self._apost(
+            app_key, "query_run_app_process", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryRunAppProcessResponse.model_validate_json(
-            await self._apost(
-                app_key, "query_run_app_process", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def list_oauth2_token(
             self, app_key: str, req: ListOauth2TokenRequest
-    ) -> ListOauth2TokenResponse:
+    ) -> ListOauth2TokenResponse | BaseError:
+        result = self._post(
+            app_key, "list_oauth2_token", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return ListOauth2TokenResponse.model_validate_json(
-            self._post(
-                app_key, "list_oauth2_token", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def alist_oauth2_token(
             self, app_key: str, req: ListOauth2TokenRequest
-    ) -> ListOauth2TokenResponse:
+    ) -> ListOauth2TokenResponse | BaseError:
+        result = await self._apost(
+            app_key, "list_oauth2_token", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return ListOauth2TokenResponse.model_validate_json(
-            await self._apost(
-                app_key, "list_oauth2_token", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def event_trigger_webhook(
             self, app_key: str, webhook_key: str, webhook_token: str
-    ) -> EventTriggerWebhookResponse:
+    ) -> EventTriggerWebhookResponse | BaseError:
+        result = self._post(
+            app_key, "trigger/webhook?key={}".format(webhook_key), {},
+            {"Authorization": "Bearer {}".format(webhook_token)}
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EventTriggerWebhookResponse.model_validate_json(
-            self._post(
-                app_key, "trigger/webhook?key={}".format(webhook_key), {},
-                {"Authorization": "Bearer {}".format(webhook_token)}
-            ),
+            result,
             by_alias=True,
         )
 
     async def aevent_trigger_webhook(
             self, app_key: str, webhook_key: str, webhook_token: str
-    ) -> EventTriggerWebhookResponse:
+    ) -> EventTriggerWebhookResponse | BaseError:
+        result = await self._apost(
+            app_key, "trigger/webhook?key={}".format(webhook_key), {},
+            {"Authorization": "Bearer {}".format(webhook_token)}
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EventTriggerWebhookResponse.model_validate_json(
-            await self._apost(
-                app_key, "trigger/webhook?key={}".format(webhook_key), {},
-                {"Authorization": "Bearer {}".format(webhook_token)}
-            ),
+            result,
             by_alias=True,
         )
 
@@ -651,179 +813,257 @@ class ChatService(Service, AppAPIMixin):
 
     def list_long_memory(
             self, app_key: str, req: ListLongMemoryRequest
-    ) -> ListLongMemoryResponse:
+    ) -> ListLongMemoryResponse | BaseError:
+        result = self._post(
+            app_key, "list_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return ListLongMemoryResponse.model_validate_json(
-            self._post(
-                app_key, "list_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def alist_long_memory(
             self, app_key: str, req: ListLongMemoryRequest
-    ) -> ListLongMemoryResponse:
+    ) -> ListLongMemoryResponse | BaseError:
+        result = await self._apost(
+            app_key, "list_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return ListLongMemoryResponse.model_validate_json(
-            await self._apost(
-                app_key, "list_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def update_long_memory(
             self, app_key: str, req: UpdateLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "update_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "update_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aupdate_long_memory(
             self, app_key: str, req: UpdateLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "update_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "update_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def delete_long_memory(
             self, app_key: str, req: DeleteLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "delete_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "delete_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def adelete_long_memory(
             self, app_key: str, req: DeleteLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "delete_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "delete_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def clear_long_memory(
             self, app_key: str, req: ClearLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "clear_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "clear_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aclear_long_memory(
             self, app_key: str, req: ClearLongMemoryRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "clear_long_memory", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "clear_long_memory", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def async_resume_app_workflow(
             self, app_key: str, req: AsyncResumeAppWorkflowRequest
-    ) -> AsyncResumeAppWorkflowResponse:
+    ) -> AsyncResumeAppWorkflowResponse | BaseError:
+        result = self._post(
+            app_key, "async_resume_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return AsyncResumeAppWorkflowResponse.model_validate_json(
-            self._post(
-                app_key, "async_resume_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def a_async_resume_app_workflow(
             self, app_key: str, req: AsyncResumeAppWorkflowRequest
-    ) -> AsyncResumeAppWorkflowResponse:
+    ) -> AsyncResumeAppWorkflowResponse | BaseError:
+        result = await self._apost(
+            app_key, "async_resume_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return AsyncResumeAppWorkflowResponse.model_validate_json(
-            await self._apost(
-                app_key, "async_resume_app_workflow", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def set_conversation_top(
             self, app_key: str, req: SetConversationTopRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "set_conversation_top", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "set_conversation_top", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aset_conversation_top(
             self, app_key: str, req: SetConversationTopRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "set_conversation_top", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "set_conversation_top", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def cancel_conversation_top(
             self, app_key: str, req: CancelConversationTopRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def acancel_conversation_top(
             self, app_key: str, req: CancelConversationTopRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "cancel_conversation_top", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def query_skill_async_task(
             self, app_key: str, req: QueryAppSkillAsyncTaskRequest
-    ) -> QueryAppSkillAsyncTaskResponse:
+    ) -> QueryAppSkillAsyncTaskResponse | BaseError:
+        result = self._post(
+            app_key, "query_skill_async_task", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryAppSkillAsyncTaskResponse.model_validate_json(
-            self._post(
-                app_key, "query_skill_async_task", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aquery_skill_async_task(
             self, app_key: str, req: QueryAppSkillAsyncTaskRequest
-    ) -> QueryAppSkillAsyncTaskResponse:
+    ) -> QueryAppSkillAsyncTaskResponse | BaseError:
+        result = await self._apost(
+            app_key, "query_skill_async_task", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryAppSkillAsyncTaskResponse.model_validate_json(
-            await self._apost(
-                app_key, "query_skill_async_task", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def sync_resume_app_workflow_blocking(
             self, app_key: str, req: SyncResumeAppWorkflowRequest
-    ) -> SyncResumeAppWorkflowResponse:
+    ) -> SyncResumeAppWorkflowResponse | BaseError:
         req.is_stream = False
-        res = self._post(app_key, "sync_resume_app_workflow", req.model_dump(by_alias=True))
-        return SyncResumeAppWorkflowResponse.model_validate_json(res, by_alias=True)
+        result = self._post(
+            app_key, "sync_resume_app_workflow", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
+        return SyncResumeAppWorkflowResponse.model_validate_json(
+            result,
+            by_alias=True,
+        )
 
     async def a_sync_resume_app_workflow_blocking(
             self, app_key: str, req: SyncResumeAppWorkflowRequest
-    ) -> SyncResumeAppWorkflowResponse:
+    ) -> SyncResumeAppWorkflowResponse | BaseError:
         req.is_stream = False
-        res = await self._apost(
+        result = await self._apost(
             app_key, "sync_resume_app_workflow", req.model_dump(by_alias=True)
         )
-        return SyncResumeAppWorkflowResponse.model_validate_json(res, by_alias=True)
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
+        return SyncResumeAppWorkflowResponse.model_validate_json(
+            result,
+            by_alias=True,
+        )
 
     def sync_resume_app_workflow_streaming(
             self, app_key: str, req: SyncResumeAppWorkflowRequest
@@ -851,101 +1091,141 @@ class ChatService(Service, AppAPIMixin):
 
     def get_app_user_variables(
             self, app_key: str, req: GetAppUserVariablesRequest
-    ) -> GetAppUserVariablesResponse:
+    ) -> GetAppUserVariablesResponse | BaseError:
+        result = self._post(
+            app_key, "get_app_user_variables", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetAppUserVariablesResponse.model_validate_json(
-            self._post(
-                app_key, "get_app_user_variables", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_app_user_variables(
             self, app_key: str, req: GetAppUserVariablesRequest
-    ) -> GetAppUserVariablesResponse:
+    ) -> GetAppUserVariablesResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_app_user_variables", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetAppUserVariablesResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_app_user_variables", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def set_app_user_variables(
             self, app_key: str, req: SetAppUserVariablesRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = self._post(
+            app_key, "set_app_user_variables", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            self._post(
-                app_key, "set_app_user_variables", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aset_app_user_variables(
             self, app_key: str, req: SetAppUserVariablesRequest
-    ) -> EmptyResponse:
+    ) -> EmptyResponse | BaseError:
+        result = await self._apost(
+            app_key, "set_app_user_variables", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return EmptyResponse.model_validate_json(
-            await self._apost(
-                app_key, "set_app_user_variables", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def query_trigger_run_records(
             self, app_key: str, req: QueryTriggerRunRecordsRequest
-    ) -> QueryTriggerRunRecordsResponse:
+    ) -> QueryTriggerRunRecordsResponse | BaseError:
+        result = self._post(
+            app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryTriggerRunRecordsResponse.model_validate_json(
-            self._post(
-                app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aquery_trigger_run_records(
             self, app_key: str, req: QueryTriggerRunRecordsRequest
-    ) -> QueryTriggerRunRecordsResponse:
+    ) -> QueryTriggerRunRecordsResponse | BaseError:
+        result = await self._apost(
+            app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryTriggerRunRecordsResponse.model_validate_json(
-            await self._apost(
-                app_key, "query_trigger_run_records", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def query_message_oauth_status(
             self, app_key: str, req: QueryAppMessageOauthStatusOpenRequest
-    ) -> QueryAppMessageOauthStatusResponse:
+    ) -> QueryAppMessageOauthStatusResponse | BaseError:
+        result = self._post(
+            app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryAppMessageOauthStatusResponse.model_validate_json(
-            self._post(
-                app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aquery_message_oauth_status(
             self, app_key: str, req: QueryAppMessageOauthStatusOpenRequest
-    ) -> QueryAppMessageOauthStatusResponse:
+    ) -> QueryAppMessageOauthStatusResponse | BaseError:
+        result = await self._apost(
+            app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return QueryAppMessageOauthStatusResponse.model_validate_json(
-            await self._apost(
-                app_key, "query_message_oauth_status", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     def get_opening_config(
             self, app_key: str, req: GetOpeningConfigOpenRequest
-    ) -> GetOpeningConfigOpenResponse:
+    ) -> GetOpeningConfigOpenResponse | BaseError:
+        result = self._post(
+            app_key, "get_opening_config", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetOpeningConfigOpenResponse.model_validate_json(
-            self._post(
-                app_key, "get_opening_config", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 
     async def aget_opening_config(
             self, app_key: str, req: GetOpeningConfigOpenRequest
-    ) -> GetOpeningConfigOpenResponse:
+    ) -> GetOpeningConfigOpenResponse | BaseError:
+        result = await self._apost(
+            app_key, "get_opening_config", req.model_dump(by_alias=True)
+        )
+        if ChatService.IsErrorResult(result):
+            return BaseError.model_validate_json(result, by_alias=True)
+
         return GetOpeningConfigOpenResponse.model_validate_json(
-            await self._apost(
-                app_key, "get_opening_config", req.model_dump(by_alias=True)
-            ),
+            result,
             by_alias=True,
         )
 

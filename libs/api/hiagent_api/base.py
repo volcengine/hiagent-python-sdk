@@ -496,7 +496,7 @@ class AppAPIMixin:
         res_text = response.text
         if not res_text:
             raise Exception("empty response")
-        return res_text
+        return res_text.strip("null")
 
     def _post(self, app_key: str, action: str, params: dict, _headers: Optional[dict] = None) -> str:
         if self.base_url == "":
@@ -517,7 +517,7 @@ class AppAPIMixin:
         res_text = response.text
         if not res_text:
             raise Exception("empty response")
-        return res_text
+        return res_text.strip("null")
 
     def _sse_post(
             self, app_key: str, action: str, params: dict
