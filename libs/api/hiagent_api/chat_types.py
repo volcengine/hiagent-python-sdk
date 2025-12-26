@@ -535,6 +535,7 @@ class LongTermMemoryRetrieveEndChatEvent(ChatEvent):
     )
     answer: str = Field(
         description="answer",
+        default="",
     )
     latency: float = Field(
         description="latency",
@@ -1507,6 +1508,7 @@ class ListOpt(BaseSchema):
     sort: list[Sorter] = Field(
         description="sort list",
         serialization_alias="Sort",
+        default=[],
     )
     page_number: int = Field(
         description="page number",
