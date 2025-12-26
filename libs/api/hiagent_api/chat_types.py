@@ -1655,7 +1655,7 @@ class AsyncResumeAppWorkflowRequest(BaseSchema):
     )
     run_id: str = Field(
         description="run id",
-        serialization_alias="RunID",
+        serialization_alias="RunId",
     )
     input: str = Field(
         description="input json str",
@@ -1771,7 +1771,7 @@ class SyncResumeAppWorkflowRequest(BaseSchema):
     )
     run_id: str = Field(
         description="run id",
-        serialization_alias="RunID",
+        serialization_alias="RunId",
     )
     input: Optional[str] = Field(
         description="input json str",
