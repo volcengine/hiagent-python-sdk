@@ -184,6 +184,22 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                     semconv.SemanticConvention.PRICE_UNIT: 0.1,
                     semconv.SemanticConvention.INPUT_PRICE: 34.5,
                     semconv.SemanticConvention.CURRENCY: "USD",
+
+                    "gen_ai.metrics.latency.first_token": self.latency_first_resp,
+                    "gen_ai.metrics.latency.model_total": round(latency, 1),
+                    "gen_ai.metrics.latency.span": round(latency, 1),
+                    "gen_ai.metrics.request.model_request_count": 1,
+                    "gen_ai.metrics.usage.currency": "USD",
+                    "gen_ai.metrics.usage.input_cost": 6.576,
+                    "gen_ai.metrics.usage.input_tokens": 822,
+                    "gen_ai.metrics.usage.output_cost": 2.48,
+                    "gen_ai.metrics.usage.output_token_tps": 27.80269058295964,
+                    "gen_ai.metrics.latency.agent_total": round(latency, 1),
+                    "gen_ai.metrics.usage.output_tokens": 124,
+                    "gen_ai.metrics.usage.total_cost": 6.2,
+                    "gen_ai.metrics.usage.total_tokens": 946,
+                    "gen_ai.span_type": "core_llm",
+                    "gen_ai.metrics.request.agent_request_count": 1,
                 }
             )
             span.set_status(status=StatusCode.OK, description="")
