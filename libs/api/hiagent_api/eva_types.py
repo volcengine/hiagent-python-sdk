@@ -57,6 +57,7 @@ class ColumnSchemaType(str, Enum):
     """Schema type"""
 
     TEXT = "Text"
+    STRING = "String"
     MULTI_CONTENT = "MultiContent"
 
 
