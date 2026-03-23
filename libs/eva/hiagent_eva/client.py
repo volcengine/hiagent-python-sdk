@@ -30,6 +30,36 @@ def init(endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str):
     return Client(endpoint, ak, sk, workspace_id, app_id)
 
 
+def _convert_to_case_data_list(
+        conversation_item: eva_types.EvaDatasetConversationItem,
+    columns: List[eva_types.EvaDatasetColumn],
+) -> List[eva_types.CaseData]:
+    """
+    Convert raw conversation item to case data list
+
+    Args:
+        conversation_item: Raw conversation item
+        columns: Column information
+
+    Returns:
+        Converted case data list
+    """
+    # Create column ID to column name mapping
+    column_map = {col.ID: col.Name for col in columns}
+
+    case_data_list = []
+
+    for round_cell_map in conversation_item.RepeatedData:
+        round_case_map = {
+            column_map[column_id]: cell
+            for column_id, cell in round_cell_map.items()
+        }
+        case_data = eva_types.CaseData(**round_case_map)
+        case_data_list.append(case_data)
+
+    return case_data_list
+
+
 class Client:
     """Eva SDK Client Class"""
 
@@ -78,6 +108,7 @@ class Client:
             ruleset_id: Ruleset ID
             description: Task description
             model_agent_config: Model agent configuration (optional, will be automatically assembled into complete configuration using app_id)
+            rule_params: rule parameters
             run_immediately: Whether to run immediately
 
         Returns:
@@ -151,6 +182,7 @@ class Client:
 
         Args:
             dataset_id: Dataset ID
+            dataset_version_id: Dataset Version ID
             page_number: Page number
             page_size: Page size
 
@@ -295,7 +327,7 @@ class Client:
             self.logger.error(f"Delete failed: {e}", exc_info=True)
             raise e
 
-    def run_evaluation(self, task_name: str) -> eva_types.GetEvaTaskReportResponse:
+    def run_evaluation(self, task_name: str) -> None:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
         try:
@@ -304,7 +336,7 @@ class Client:
                 WorkspaceID=self.workspace_id, TaskName=task_name
             ))
             task_id = task.TaskID
-            # 2. Retry task rule evaludation
+            # 2. Retry task rule evaluation
             request = eva_types.RetryEvaTaskRequest(
                 WorkspaceID=self.workspace_id,
                 TaskID=task_id,
@@ -322,36 +354,6 @@ class Client:
         except Exception as e:
             self.logger.error(f"Retry failed: {e}", exc_info=True)
             raise e
-
-    def _convert_to_case_data_list(
-        self,
-        conversation_item: eva_types.EvaDatasetConversationItem,
-        columns: List[eva_types.EvaDatasetColumn],
-    ) -> List[eva_types.CaseData]:
-        """
-        Convert raw conversation item to case data list
-
-        Args:
-            conversation_item: Raw conversation item
-            columns: Column information
-
-        Returns:
-            Converted case data list
-        """
-        # Create column ID to column name mapping
-        column_map = {col.ID: col.Name for col in columns}
-
-        case_data_list = []
-
-        for round_cell_map in conversation_item.RepeatedData:
-            round_case_map = {
-                column_map[column_id]: cell
-                for column_id, cell in round_cell_map.items()
-            }
-            case_data = eva_types.CaseData(**round_case_map)
-            case_data_list.append(case_data)
-
-        return case_data_list
 
     def run_inference_and_evaluation(
         self,
@@ -374,6 +376,7 @@ class Client:
             dataset_version_id: Dataset version ID
             task_name: Task name
             inference_function: Inference function that receives case data list and returns user inference results list
+            rule_params: rule parameters
             ruleset_id: Ruleset ID
             target_config: Model agent configuration (optional)
             max_conversations: Maximum number of conversations
@@ -442,7 +445,7 @@ class Client:
                 self.logger.info("Running inference and submitting results...")
                 for conversation_item in conversation_items:
                     # Convert to case data list
-                    case_data_list = self._convert_to_case_data_list(
+                    case_data_list = _convert_to_case_data_list(
                         conversation_item, columns
                     )
 
