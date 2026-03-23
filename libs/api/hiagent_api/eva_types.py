@@ -193,6 +193,24 @@ class EvaTaskSource(str, Enum):
     DATASET = "Dataset"
     TRACE = "Trace"
 
+class EvaExecParam(BaseModel):
+    Name: str = Field(..., description="Param name")
+    Required: bool = Field(..., description="Whether required")
+    Builtin: bool = Field(..., description="Whether builtin")
+    Source: Optional[str] = Field(default=None, description="Reference source")
+    Field: Optional[str] = Field(default=None, description="Reference field")
+    JsonPath: Optional[str] = Field(default=None, description="Reference JSONPath")
+    Type: Optional[str] = Field(default=None, description="Param type")
+
+class EvaTaskRuleParams(BaseModel):
+    RuleID: str = Field(..., description="Rule ID")
+    RuleVersionID: str = Field(..., description="Rule Version ID")
+    Param: Optional[EvaExecParam] = Field(default=None, description="Rule param")
+
+class EvaTaskTargetParams(BaseModel):
+    Params: Optional[List[EvaExecParam]] = Field(default=None, description="Target params")
+    RuleParams: Optional[List[EvaTaskRuleParams]] = Field(default=None, description="Rule params")
+
 
 class EvaTaskTarget(BaseModel):
     Type: EvaTargetType = Field(title="Target Type", description="Evaluation target type")
@@ -200,7 +218,7 @@ class EvaTaskTarget(BaseModel):
     TargetName: str = Field(title="Target Name", description="Evaluation target name")
     TargetIcon: Optional[str] = Field(default=None, title="Target Icon", description="Evaluation target avatar URL")
     TargetConfig: EvaTargetConfig = Field(title="Target Config", description="Evaluation target configuration")
-    QPS: Optional[int] = Field(default=1, title="QPS", description="QPS configuration of the evaluation target")
+    Params: Optional[EvaTaskTargetParams] = Field(default=None, title="Params", description="Evaluation target params")
 
 
 class DatasetTaskConfig(BaseModel):
@@ -261,7 +279,7 @@ class CreateEvaTaskRequest(BaseModel):
     RulesConfig: EvaTaskRulesConfig = Field(
         title="Rules Config", description="Task rules configuration"
     )
-    DatasetConfig: DatasetTaskConfigForModify = Field(
+    DatasetConfig: Optional[DatasetTaskConfigForModify] = Field(
         default=None, title="Dataset Task Configuration", description="Dataset task configuration"
     )
     Source: EvaTaskSource = Field(title="Task Source", description="Task source: Dataset or Trace")

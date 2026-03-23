@@ -65,6 +65,7 @@ class Client:
         ruleset_id: str,
         description: str = "",
         model_agent_config: Optional[eva_types.ModelAgentConfig] = None,
+        rule_params: Optional[List[EvaTaskRuleParams]] = None,
         run_immediately: bool = True,
     ) -> eva_types.CreateEvaTaskResponse:
         """
@@ -88,19 +89,19 @@ class Client:
         # Automatically create evaluation target, using app_id as target_id
         # If ModelAgentConfig is provided, assemble it into complete EvaTargetCustomAPPConfig
         if model_agent_config:
-            target_config = eva_types.EvaTargetCustomAPPConfig(
+            custom_app_cfg = eva_types.EvaTargetCustomAPPConfig(
                 AppID=self.app_id, ModelAgentConfig=model_agent_config.model_dump()
             )
-            target_config_dict = target_config.model_dump()
         else:
-            target_config_dict = {}
+            custom_app_cfg = eva_types.EvaTargetCustomAPPConfig(AppID=self.app_id, ModelAgentConfig=None)
+        target_config = eva_types.EvaTargetConfig(CustomAPPConfig=custom_app_cfg)
 
         targets = [
             eva_types.EvaTaskTarget(
-                Type="CustomAPP",
+                Type=eva_types.EvaTargetType.CUSTOM_APP,
                 TargetID=self.app_id,
                 TargetName=f"App-{self.app_id}",
-                TargetConfig=target_config_dict,
+                TargetConfig=target_config,
                 QPS=1,
             )
         ]
@@ -110,10 +111,16 @@ class Client:
             Name=task_name,
             Description=description,
             Targets=targets,
-            DatasetID=dataset_id,
-            DatasetVersionID=dataset_version_id,
-            RulesetID=ruleset_id,
             RunImmediately=run_immediately,
+            RulesConfig=eva_types.EvaTaskRulesConfig(
+                Source=eva_types.EvaTaskRuleSource.RULESET,
+                Ruleset=eva_types.EvaTaskRulesetItemConfig(RulesetID=ruleset_id),
+            ),
+            DatasetConfig=eva_types.DatasetTaskConfigForModify(
+                ID=dataset_id,
+                VersionID=dataset_version_id,
+            ),
+            Source=eva_types.EvaTaskSource.DATASET,
         )
 
         return self.eva_service.CreateEvaTask(request)
@@ -295,9 +302,8 @@ class Client:
 
             # 4. Get evaluation report
             report = self.get_task_report(task_id)
-            self.logger.info(f"Evaluation completed with status: {report.Status}")
+            self.logger.info(f"Evaluation report created at: {report.CreatedAt}")
 
-            return report
         except Exception as e:
             self.logger.error(f"Retry failed: {e}", exc_info=True)
             raise e
@@ -368,7 +374,6 @@ class Client:
                 task_id = task.TaskID
                 if task.ResultTaskStatus.Status in [
                     eva_types.EvaTaskStatus.FAILED,
-                    eva_types.EvaTaskStatus.CANCELLED,
                     eva_types.EvaTaskStatus.PARTIAL_SUCCEED,
                     eva_types.EvaTaskStatus.PAUSED,
                 ]:
@@ -454,9 +459,8 @@ class Client:
 
             # 6. Get evaluation report
             report = self.get_task_report(task_id)
-            self.logger.info(f"Evaluation completed with status: {report.Status}")
+            self.logger.info(f"Evaluation report created at: {report.CreatedAt}")
 
-            return report
 
         except Exception as e:
             self.logger.error(f"Evaluation failed: {e}", exc_info=True)
@@ -543,7 +547,6 @@ class Client:
         while task.ResultTaskStatus.Status not in [
             eva_types.EvaTaskStatus.SUCCEED,
             eva_types.EvaTaskStatus.FAILED,
-            eva_types.EvaTaskStatus.CANCELLED,
             eva_types.EvaTaskStatus.PARTIAL_SUCCEED,
             eva_types.EvaTaskStatus.PAUSED,
         ]:

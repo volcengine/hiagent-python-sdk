@@ -112,9 +112,8 @@ def main():
         # Print results
         print("\n✓ Evaluation completed!")
         print(f"   Task Name: {task_name}")
-        print(f"   Status: {report.Status}")
-        print(f"   Number of Rules: {len(report.Rules)}")
-        print(f"   Number of Targets: {len(report.Targets)}")
+        print(f"   Number of Rules: {len(report.Rules or [])}")
+        print(f"   Number of Targets: {len(report.Targets or [])}")
         print(f"   Created At: {report.CreatedAt}")
         print(f"   Updated At: {report.UpdatedAt}")
 
