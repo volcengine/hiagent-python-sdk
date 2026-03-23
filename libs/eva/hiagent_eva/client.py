@@ -65,7 +65,7 @@ class Client:
         ruleset_id: str,
         description: str = "",
         model_agent_config: Optional[eva_types.ModelAgentConfig] = None,
-        rule_params: Optional[List[EvaTaskRuleParams]] = None,
+        rule_params: Optional[List[eva_types.EvaTaskRuleParams]] = None,
         run_immediately: bool = True,
     ) -> eva_types.CreateEvaTaskResponse:
         """
@@ -102,9 +102,26 @@ class Client:
                 TargetID=self.app_id,
                 TargetName=f"App-{self.app_id}",
                 TargetConfig=target_config,
-                QPS=1,
             )
         ]
+
+        if ruleset_id:
+            rules_config = eva_types.EvaTaskRulesConfig(
+                Source=eva_types.EvaTaskRuleSource.RULESET,
+                Ruleset=eva_types.EvaTaskRulesetItemConfig(RulesetID=ruleset_id),
+            )
+        else:
+            if not rule_params or len(rule_params) == 0:
+                raise ValueError("Either ruleset_id or rule_params must be provided")
+            rules = [
+                eva_types.EvaTaskRuleItemConfig(
+                    RuleID=rp.RuleID, RuleVersionID=rp.RuleVersionID
+                )
+                for rp in rule_params
+            ]
+            rules_config = eva_types.EvaTaskRulesConfig(
+                Source=eva_types.EvaTaskRuleSource.RULES, Rules=rules
+            )
 
         request = eva_types.CreateEvaTaskRequest(
             WorkspaceID=self.workspace_id,
@@ -112,10 +129,7 @@ class Client:
             Description=description,
             Targets=targets,
             RunImmediately=run_immediately,
-            RulesConfig=eva_types.EvaTaskRulesConfig(
-                Source=eva_types.EvaTaskRuleSource.RULESET,
-                Ruleset=eva_types.EvaTaskRulesetItemConfig(RulesetID=ruleset_id),
-            ),
+            RulesConfig=rules_config,
             DatasetConfig=eva_types.DatasetTaskConfigForModify(
                 ID=dataset_id,
                 VersionID=dataset_version_id,
@@ -213,6 +227,7 @@ class Client:
         except Exception as e:
             if "task result is already succeed" not in str(e) and "task result is already running" not in str(e):
                 raise e
+        return eva_types.ExecEvaTaskRowGroupResponse()
 
     @retry(
         stop=stop_after_attempt(3),
@@ -347,6 +362,7 @@ class Client:
             [List[eva_types.CaseData]], List[eva_types.InferenceResult]
         ],
         ruleset_id: str,
+        rule_params: Optional[List[eva_types.EvaTaskRuleParams]] = None,
         target_config: Optional[eva_types.ModelAgentConfig] = None,
         max_conversations: int = 10,
     ) -> eva_types.GetEvaTaskReportResponse:
@@ -388,6 +404,7 @@ class Client:
                         dataset_version_id=dataset_version_id,
                         task_name=task_name,
                         ruleset_id=ruleset_id,
+                        rule_params=rule_params,
                         model_agent_config=target_config,
                     )
                     task_id = task_response.TaskID
@@ -460,6 +477,7 @@ class Client:
             # 6. Get evaluation report
             report = self.get_task_report(task_id)
             self.logger.info(f"Evaluation report created at: {report.CreatedAt}")
+            return report
 
 
         except Exception as e:
