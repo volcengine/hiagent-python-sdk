@@ -1,7 +1,7 @@
 [
   {
-    "RuleID": "d2t8khnqvfbu0m4qg7mg",
-    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
     "Param": {
       "Name": "input",
       "Required": false,
@@ -12,8 +12,8 @@
     }
   },
   {
-    "RuleID": "d2t8khnqvfbu0m4qg7mg",
-    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
     "Param": {
       "Name": "reference_output",
       "Required": false,
@@ -24,8 +24,8 @@
     }
   },
   {
-    "RuleID": "d2t8khnqvfbu0m4qg7mg",
-    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
     "Param": {
       "Name": "generated_output",
       "Required": false,

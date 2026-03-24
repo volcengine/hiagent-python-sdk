@@ -175,7 +175,7 @@ class EvaExecParam(BaseModel):
 
 class EvaTaskRuleParams(BaseModel):
     RuleID: str = Field(..., description="Rule ID")
-    RuleVersionID: str = Field(..., description="Rule Version ID")
+    RuleVersionID: Optional[str] = Field(default=None, description="Rule Version ID")
     Param: Optional[EvaExecParam] = Field(default=None, description="Rule param")
 
 class EvaTaskTargetParams(BaseModel):
