@@ -146,12 +146,18 @@ class Client:
         else:
             if not rule_params or len(rule_params) == 0:
                 raise ValueError("Either ruleset_id or rule_params must be provided")
-            rules = [
-                eva_types.EvaTaskRuleItemConfig(
-                    RuleID=rp.RuleID, RuleVersionID=rp.RuleVersionID
+            rules = []
+            seen_rule_keys = set()
+            for rp in rule_params:
+                rule_key = (rp.RuleID, rp.RuleVersionID)
+                if rule_key in seen_rule_keys:
+                    continue
+                seen_rule_keys.add(rule_key)
+                rules.append(
+                    eva_types.EvaTaskRuleItemConfig(
+                        RuleID=rp.RuleID, RuleVersionID=rp.RuleVersionID
+                    )
                 )
-                for rp in rule_params
-            ]
             rules_config = eva_types.EvaTaskRulesConfig(
                 Source=eva_types.EvaTaskRuleSource.RULES, Rules=rules
             )
