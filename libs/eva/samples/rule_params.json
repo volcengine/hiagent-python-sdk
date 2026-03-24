@@ -1,0 +1,38 @@
+[
+  {
+    "RuleID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "Param": {
+      "Name": "input",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Dataset",
+      "Field": "input",
+      "Type": "String"
+    }
+  },
+  {
+    "RuleID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "Param": {
+      "Name": "reference_output",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Dataset",
+      "Field": "reference_output",
+      "Type": "String"
+    }
+  },
+  {
+    "RuleID": "d2t8khnqvfbu0m4qg7mg",
+    "RuleVersionID": "d2t8khnqvfbu0m4qg7mg",
+    "Param": {
+      "Name": "generated_output",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Target",
+      "Field": "generated_output",
+      "Type": "String"
+    }
+  }
+]

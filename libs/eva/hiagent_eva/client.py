@@ -20,6 +20,8 @@ from hiagent_api import eva_types
 from hiagent_api.eva import EvaService
 from tenacity import before_sleep_log, retry, stop_after_attempt, wait_fixed
 
+from hiagent_api.eva_types import EvaTaskSource, GetEvaTaskReportResponse
+
 logger = logging.getLogger(__name__)
 
 
@@ -125,14 +127,14 @@ class Client:
             )
         else:
             custom_app_cfg = eva_types.EvaTargetCustomAPPConfig(AppID=self.app_id, ModelAgentConfig=None)
-        target_config = eva_types.EvaTargetConfig(CustomAPPConfig=custom_app_cfg)
+        custom_app_cfg = custom_app_cfg.model_dump()
 
         targets = [
             eva_types.EvaTaskTarget(
                 Type=eva_types.EvaTargetType.CUSTOM_APP,
                 TargetID=self.app_id,
                 TargetName=f"App-{self.app_id}",
-                TargetConfig=target_config,
+                TargetConfig=custom_app_cfg,
             )
         ]
 
@@ -291,7 +293,7 @@ class Client:
         try:
             # 1. Get task_id from task_name
             task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
-                WorkspaceID=self.workspace_id, TaskName=task_name
+                WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET,TaskName=task_name
             ))
             task_id = task.TaskID
             # 2. Pause task
@@ -314,7 +316,7 @@ class Client:
         try:
             # 1. Get task_id from task_name
             task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
-                WorkspaceID=self.workspace_id, TaskName=task_name
+                WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET, TaskName=task_name
             ))
             task_id = task.TaskID
             # 2. Delete task
@@ -327,13 +329,13 @@ class Client:
             self.logger.error(f"Delete failed: {e}", exc_info=True)
             raise e
 
-    def run_evaluation(self, task_name: str) -> None:
+    def run_evaluation(self, task_name: str) -> GetEvaTaskReportResponse:
         if not self.eva_service:
             raise ValueError("Client not initialized. Call init() first.")
         try:
             # 1. Get task_id from task_name
             task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
-                WorkspaceID=self.workspace_id, TaskName=task_name
+                WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET, TaskName=task_name
             ))
             task_id = task.TaskID
             # 2. Retry task rule evaluation
@@ -350,6 +352,7 @@ class Client:
             # 4. Get evaluation report
             report = self.get_task_report(task_id)
             self.logger.info(f"Evaluation report created at: {report.CreatedAt}")
+            return report
 
         except Exception as e:
             self.logger.error(f"Retry failed: {e}", exc_info=True)
@@ -388,7 +391,7 @@ class Client:
             # 1. Get or Create evaluation task
             try:
                 task = self.eva_service.GetEvaTask(eva_types.GetEvaTaskRequest(
-                    WorkspaceID=self.workspace_id, TaskName=task_name
+                    WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET, TaskName=task_name
                 ))
                 task_id = task.TaskID
                 if task.ResultTaskStatus.Status in [
@@ -562,7 +565,7 @@ class Client:
 
     def _wait_task_finished(self, task_id: str):
         request = eva_types.GetEvaTaskRequest(
-            WorkspaceID=self.workspace_id, TaskID=task_id
+            WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET, TaskID=task_id
         )
         task = self.eva_service.GetEvaTask(request)
         while task.ResultTaskStatus.Status not in [
@@ -576,7 +579,7 @@ class Client:
 
     def _wait_task_paused(self, task_id: str):
         request = eva_types.GetEvaTaskRequest(
-            WorkspaceID=self.workspace_id, TaskID=task_id
+            WorkspaceID=self.workspace_id, Source=EvaTaskSource.DATASET, TaskID=task_id
         )
         task = self.eva_service.GetEvaTask(request)
         while task.ResultTaskStatus.Status not in [

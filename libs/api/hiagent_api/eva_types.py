@@ -144,35 +144,6 @@ class EvaTargetCustomAPPConfig(BaseModel):
         default=None, description="Model basic configuration"
     )
 
-class EvaTargetBuiltinModelConfig(BaseModel):
-    ModelID: str = Field(..., description="Model ID")
-    ModelName: str = Field(..., description="Model Name")
-    ModelType: str = Field(..., description="Model Connection Type")
-    ModelAgentConfig: ModelAgentConfig = Field(..., description="Model Agent Config")
-
-class EvaTargetBuiltinAgentConfig(BaseModel):
-    AppID: str = Field(..., description="App ID")
-    Type: str = Field(..., description="Builtin Agent Version Type")
-    VersionName: Optional[str] = Field(default=None, description="Version Name")
-    VersionID: Optional[str] = Field(default=None, description="Version ID")
-    UseLatestPublishedVersion: Optional[bool] = Field(
-        default=None, description="Use latest published version"
-    )
-
-class EvaTargetBuiltinPromptConfig(BaseModel):
-    ModelID: str = Field(..., description="Model ID")
-    ModelName: str = Field(..., description="Model Name")
-    ModelType: str = Field(..., description="Model Connection Type")
-    ModelAgentConfig: ModelAgentConfig = Field(..., description="Model Agent Config")
-    PromptID: str = Field(..., description="Prompt ID")
-    PromptName: str = Field(..., description="Prompt Name")
-
-class EvaTargetConfig(BaseModel):
-    BuiltinModelConfig: Optional[EvaTargetBuiltinModelConfig] = Field(default=None)
-    BuiltinAgentConfig: Optional[EvaTargetBuiltinAgentConfig] = Field(default=None)
-    BuiltinPromptConfig: Optional[EvaTargetBuiltinPromptConfig] = Field(default=None)
-    CustomAPPConfig: Optional[EvaTargetCustomAPPConfig] = Field(default=None)
-
 class EvaTaskRuleItemConfig(BaseModel):
     RuleID: str = Field(..., description="Rule ID")
     RuleVersionID: str = Field(..., description="Rule Version ID")
@@ -198,9 +169,9 @@ class EvaExecParam(BaseModel):
     Required: bool = Field(..., description="Whether required")
     Builtin: bool = Field(..., description="Whether builtin")
     Source: Optional[str] = Field(default=None, description="Reference source")
-    Field: Optional[str] = Field(default=None, description="Reference field")
     JsonPath: Optional[str] = Field(default=None, description="Reference JSONPath")
     Type: Optional[str] = Field(default=None, description="Param type")
+    Field: Optional[str] = Field(default=None, description="Reference field")
 
 class EvaTaskRuleParams(BaseModel):
     RuleID: str = Field(..., description="Rule ID")
@@ -217,7 +188,7 @@ class EvaTaskTarget(BaseModel):
     TargetID: str = Field(title="Target ID", description="Evaluation target ID")
     TargetName: str = Field(title="Target Name", description="Evaluation target name")
     TargetIcon: Optional[str] = Field(default=None, title="Target Icon", description="Evaluation target avatar URL")
-    TargetConfig: EvaTargetConfig = Field(title="Target Config", description="Evaluation target configuration")
+    TargetConfig: Dict[str, Any] = Field(title="Target Config", description="Evaluation target configuration")
     Params: Optional[EvaTaskTargetParams] = Field(default=None, title="Params", description="Evaluation target params")
 
 
@@ -840,14 +811,9 @@ class EvaTaskItemRulesetRule(BaseModel):
 class EvaTaskItemRuleset(BaseModel):
     """Task ruleset"""
 
-    RulesetID: str = Field(
-        title="Evaluation Ruleset ID", description="Evaluation ruleset ID"
-    )
-    RulesetName: str = Field(
-        title="Evaluation Ruleset Name", description="Evaluation ruleset name"
-    )
-    IsDeleted: bool = Field(
-        title="Is Deleted", description="Whether it has been deleted"
+    RuleSource: EvaTaskRuleSource = Field(default=None, title="Rule Source", description="Rule source")
+    Ruleset: Optional[dict] = Field(
+        default=None, title="Evaluation Ruleset", description="Evaluation Ruleset"
     )
     Rules: Optional[List[EvaTaskItemRulesetRule]] = Field(
         default=None,
@@ -979,8 +945,8 @@ class EvaTaskItem(BaseModel):
         default=None, title="Task Template", description="Task template"
     )
     TargetType: str = Field(title="Task Type", description="Task type")
-    Ruleset: EvaTaskItemRuleset = Field(
-        title="Task Evaluation Ruleset", description="Task evaluation ruleset"
+    Rule: Optional[EvaTaskItemRuleset] = Field(
+        default=None, title="Task Evaluation Ruleset", description="Task evaluation ruleset"
     )
     Dataset: EvaTaskItemDataset = Field(
         title="Task Evaluation Dataset", description="Task evaluation dataset"
@@ -1001,6 +967,7 @@ class GetEvaTaskRequest(BaseModel):
     """Get evaluation task request"""
 
     WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    Source: EvaTaskSource = Field(title="Task Source", description="Task Source")
     TaskID: Optional[str] = Field(default=None, title="Task ID", description="Task ID")
     TaskName: Optional[str] = Field(
         default=None, title="Task Name", description="Task name"

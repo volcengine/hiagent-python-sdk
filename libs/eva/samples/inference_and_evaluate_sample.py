@@ -44,7 +44,10 @@ def my_inference_function(
     results = []
     message_list = []
     for case in case_data_list:
-        input = case["input"].CellContent[0].Text
+        if case["input"].CellContent is not None:
+            input = case["input"].CellContent[0].Text
+        else:
+            input = case["input"].Text
         message_list.append({"role": "user", "content": input})
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
         message_list.append({"role": "assistant", "content": content})
