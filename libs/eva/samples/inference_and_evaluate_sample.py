@@ -23,7 +23,7 @@ import json
 import logging
 import os
 from time import sleep
-from typing import List
+from typing import List, Optional
 
 from dotenv import load_dotenv
 
@@ -44,7 +44,10 @@ def my_inference_function(
     results = []
     message_list = []
     for case in case_data_list:
-        input = case["input"].CellContent[0].Text
+        if case["input"].CellContent is not None:
+            input = case["input"].CellContent[0].Text
+        else:
+            input = case["input"].Text
         message_list.append({"role": "user", "content": input})
         content = f"message list={json.dumps(message_list, ensure_ascii=False)}"
         message_list.append({"role": "assistant", "content": content})
@@ -69,11 +72,14 @@ def main():
         "-d", "--dataset-id", required=True, help="Dataset ID for evaluation"
     )
     parser.add_argument(
-        "-r", "--ruleset-id", required=True, help="Ruleset ID for evaluation"
+        "-r", "--ruleset-id", required=False, help="Ruleset ID for evaluation"
     )
     parser.add_argument("-n", "--name", required=True, help="Task name")
     parser.add_argument(
         "-v", "--dataset-version-id", required=True, help="Dataset version ID"
+    )
+    parser.add_argument(
+        "-f", "--rule-params-file-path", required=False, help="rule params josn file path"
     )
     args = parser.parse_args()
 
@@ -93,6 +99,16 @@ def main():
     dataset_version_id = args.dataset_version_id
     ruleset_id = args.ruleset_id
     task_name = args.name
+    rule_params_file_path = args.rule_params_file_path
+    rule_params: Optional[List[eva_types.EvaTaskRuleParams]] = None
+    if rule_params_file_path:
+        try:
+            with open(rule_params_file_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list) and len(data) > 0:
+                rule_params = [eva_types.EvaTaskRuleParams.model_validate(item) for item in data]
+        except Exception:
+            rule_params = None
 
     try:
         # Run evaluation
@@ -106,15 +122,15 @@ def main():
             task_name=task_name,
             inference_function=my_inference_function,
             ruleset_id=ruleset_id,
+            rule_params=rule_params,
             max_conversations=5,
         )
 
         # Print results
         print("\n✓ Evaluation completed!")
         print(f"   Task Name: {task_name}")
-        print(f"   Status: {report.Status}")
-        print(f"   Number of Rules: {len(report.Rules)}")
-        print(f"   Number of Targets: {len(report.Targets)}")
+        print(f"   Number of Rules: {len(report.Rules or [])}")
+        print(f"   Number of Targets: {len(report.Targets or [])}")
         print(f"   Created At: {report.CreatedAt}")
         print(f"   Updated At: {report.UpdatedAt}")
 

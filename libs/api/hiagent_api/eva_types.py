@@ -24,6 +24,7 @@ class AgentModeStrategy(str, Enum):
     REACT = "react"
     FUNCTION_CALL = "function_call"
     PLAN_AND_EXECUTE = "plan_and_execute"
+    DEEP_SEARCH = "deep_search"
 
 
 class EvaTargetType(str, Enum):
@@ -31,22 +32,22 @@ class EvaTargetType(str, Enum):
     BUILTIN_AGENT = "BuiltinAgent"
     BUILTIN_PROMPT = "BuiltinPrompt"
     CUSTOM_APP = "CustomAPP"
+    CUSTOM = "Custom"
 
 
 class EvaTaskStatus(str, Enum):
-    WAITING = "Waiting"  # Waiting
-    PENDING = "Pending"  # Pending
-    RUNNING = "Running"  # Running
-    SUCCEED = "Succeed"  # Success
-    PARTIAL_SUCCEED = "PartialSucceed"  # Partial success
-    FAILED = "Failed"  # Failed
-    CANCELLING = "Cancelling"  # Cancelling
-    CANCELLED = "Cancelled"  # Task cancelled
-    PAUSED = "Paused"  # Task paused
-    PAUSING = "Pausing"  # Task pausing
+    WAITING = "Waiting"
+    PENDING = "Pending"
+    RUNNING = "Running"
+    SUCCEED = "Succeed"
+    PARTIAL_SUCCEED = "PartialSucceed"
+    FAILED = "Failed"
+    PAUSING = "Pausing"
+    PAUSED = "Paused"
+    COLLECT_COMPLETED = "CollectCompleted"
 
 
-# New CellContent related types
+# New CellContent related types (kept for compatibility with older API variants)
 class CellContentPartType(str, Enum):
     """Cell content part type"""
 
@@ -93,7 +94,7 @@ class CellContentPart(BaseModel):
 class CellContent(BaseModel):
     """Cell content"""
 
-    Type: CellContentPartType = Field(
+    Type: Optional[CellContentPartType] = Field(
         default=None, alias="type", description="Content part type"
     )
     Text: Optional[str] = Field(default=None, alias="text", description="Text content")
@@ -120,19 +121,19 @@ class ModelAgentConfig(BaseModel):
     Temperature: float = Field(..., description="Randomness")
     TopP: float = Field(..., description="Nucleus sampling")
     MaxTokens: int = Field(..., description="Max tokens per response")
-    RoundsReserved: int = Field(..., description="Conversation rounds to preserve")
-    RagNum: int = Field(..., description="RAG range")
-    Strategy: AgentModeStrategy = Field(
-        default=AgentModeStrategy.REACT, description="Strategy, default react"
+    ReasoningMode: Optional[bool] = Field(
+        default=None, description="Enable long reasoning mode"
     )
-    MaxIterations: int = Field(
-        default=5, ge=1, le=5, description="Max iterations, range 1-5, default 5"
+    ReasoningSwitch: Optional[bool] = Field(
+        default=None, description="Deprecated: reasoning switch"
     )
-    RagEnabled: bool = Field(
-        default=False, description="RAG switch, default off: false"
+    ReasoningSwitchType: Optional[str] = Field(
+        default=None,
+        description="Reasoning switch type: auto/enabled/disabled",
     )
-    ReasoningMode: bool = Field(..., description="Deep thinking mode")
-    ReasoningSwitch: bool = Field(..., description="Deep thinking switch")
+    ReasoningEffortType: Optional[str] = Field(
+        default=None, description="Reasoning effort level"
+    )
 
 
 class EvaTargetCustomAPPConfig(BaseModel):
@@ -143,34 +144,52 @@ class EvaTargetCustomAPPConfig(BaseModel):
         default=None, description="Model basic configuration"
     )
 
+class EvaTaskRuleItemConfig(BaseModel):
+    RuleID: str = Field(..., description="Rule ID")
+    RuleVersionID: str = Field(..., description="Rule Version ID")
+
+class EvaTaskRuleSource(str, Enum):
+    RULES = "rules"
+    RULESET = "ruleset"
+
+class EvaTaskRulesetItemConfig(BaseModel):
+    RulesetID: str = Field(..., description="Ruleset ID")
+
+class EvaTaskRulesConfig(BaseModel):
+    Source: EvaTaskRuleSource = Field(..., description="Rule source")
+    Rules: Optional[List[EvaTaskRuleItemConfig]] = Field(default=None, description="Rules")
+    Ruleset: Optional[EvaTaskRulesetItemConfig] = Field(default=None, description="Ruleset")
+
+class EvaTaskSource(str, Enum):
+    DATASET = "Dataset"
+    TRACE = "Trace"
+
+class EvaExecParam(BaseModel):
+    Name: str = Field(..., description="Param name")
+    Required: bool = Field(..., description="Whether required")
+    Builtin: bool = Field(..., description="Whether builtin")
+    Source: Optional[str] = Field(default=None, description="Reference source")
+    JsonPath: Optional[str] = Field(default=None, description="Reference JSONPath")
+    Type: Optional[str] = Field(default=None, description="Param type")
+    Field: Optional[str] = Field(default=None, description="Reference field")
+
+class EvaTaskRuleParams(BaseModel):
+    RuleID: str = Field(..., description="Rule ID")
+    RuleVersionID: Optional[str] = Field(default=None, description="Rule Version ID")
+    Param: Optional[EvaExecParam] = Field(default=None, description="Rule param")
+
+class EvaTaskTargetParams(BaseModel):
+    Params: Optional[List[EvaExecParam]] = Field(default=None, description="Target params")
+    RuleParams: Optional[List[EvaTaskRuleParams]] = Field(default=None, description="Rule params")
+
 
 class EvaTaskTarget(BaseModel):
-    Type: str = Field(
-        title="Evaluation target type",
-        description="Evaluation target type, such as BuiltinModel, BuiltinAgent, BuiltinPrompt, CustomAPP",
-    )
-    TargetID: str = Field(
-        title="Evaluation target ID",
-        description="Evaluation target ID",
-    )
-    TargetName: str = Field(
-        title="Evaluation target name",
-        description="Evaluation target name",
-    )
-    TargetIcon: Optional[str] = Field(
-        default=None,
-        title="Evaluation target avatar",
-        description="Evaluation target avatar URL",
-    )
-    TargetConfig: Dict[str, Any] = Field(
-        title="Evaluation target configuration",
-        description="Model-related configuration of the evaluation target",
-    )
-    QPS: int = Field(
-        default=1,
-        title="QPS configuration",
-        description="QPS configuration of the evaluation target",
-    )
+    Type: EvaTargetType = Field(title="Target Type", description="Evaluation target type")
+    TargetID: str = Field(title="Target ID", description="Evaluation target ID")
+    TargetName: str = Field(title="Target Name", description="Evaluation target name")
+    TargetIcon: Optional[str] = Field(default=None, title="Target Icon", description="Evaluation target avatar URL")
+    TargetConfig: Dict[str, Any] = Field(title="Target Config", description="Evaluation target configuration")
+    Params: Optional[EvaTaskTargetParams] = Field(default=None, title="Params", description="Evaluation target params")
 
 
 class DatasetTaskConfig(BaseModel):
@@ -183,6 +202,20 @@ class DatasetTaskConfig(BaseModel):
         default=10, description="Batch processing size", ge=1, le=100
     )
 
+class DatasetTaskConfigForModify(BaseModel):
+    ID: Optional[str] = Field(default=None, title="Dataset ID", description="Dataset ID")
+    VersionID: Optional[str] = Field(
+        default=None, title="Dataset Version ID", description="Dataset version ID"
+    )
+    DataStartIndex: Optional[int] = Field(
+        default=None, title="Data Start Index", description="Data start index"
+    )
+    DataEndIndex: Optional[int] = Field(
+        default=None, title="Data End Index", description="Data end index"
+    )
+    UseLatestVersion: Optional[bool] = Field(
+        default=None, title="Use Latest Version", description="Use latest published version"
+    )
 
 # Request types
 class CreateEvaTaskRequest(BaseModel):
@@ -209,28 +242,18 @@ class CreateEvaTaskRequest(BaseModel):
     Targets: List[EvaTaskTarget] = Field(
         title="Task Evaluation Targets", description="Task evaluation target list"
     )
-    DatasetID: str = Field(
-        title="Evaluation Dataset ID",
-        description="Evaluation dataset ID",
-    )
-    RulesetID: str = Field(
-        title="Task Evaluation Rules",
-        description="Task evaluation rule ID",
-    )
     RunImmediately: bool = Field(
         default=True,
         title="Run Task Immediately",
         description="Whether to run the task immediately",
     )
-    DatasetConfig: Optional[DatasetTaskConfig] = Field(
-        default=None,
-        title="Dataset Task Configuration",
-        description="Dataset task configuration",
+    RulesConfig: EvaTaskRulesConfig = Field(
+        title="Rules Config", description="Task rules configuration"
     )
-    DatasetVersionID: str = Field(
-        title="Dataset Version ID",
-        description="Dataset version ID",
+    DatasetConfig: Optional[DatasetTaskConfigForModify] = Field(
+        default=None, title="Dataset Task Configuration", description="Dataset task configuration"
     )
+    Source: EvaTaskSource = Field(title="Task Source", description="Task source: Dataset or Trace")
 
 
 class CreateEvaTaskResponse(BaseModel):
@@ -526,8 +549,10 @@ class EvaConversationStatus(str, Enum):
 
     SUCCEED = "Succeed"
     FAILED = "Failed"
-    PROCESSING = "Processing"
+    RUNNING = "Running"
     PENDING = "Pending"
+    QUEUING = "Queuing"
+    PAUSED = "Paused"
 
 
 class EvaTaskResultTargetContentPair(BaseModel):
@@ -630,101 +655,57 @@ class GetEvaTaskReportRequest(BaseModel):
     )
 
 
-# New evaluation report related types, based on actual API return structure
-class EvaReportTargetDetail(BaseModel):
-    """Evaluation report target details"""
-
-    Type: str = Field(title="Target Type", description="Target type")
+class GetEvaTaskReportRuleTarget(BaseModel):
     TargetID: str = Field(title="Target ID", description="Target ID")
-    TargetName: str = Field(title="Target Name", description="Target name")
-    TargetIcon: str = Field(title="Target Icon", description="Target icon")
-    TargetConfig: Dict[str, Any] = Field(
-        title="Target Configuration", description="Target configuration"
+    TargetDetail: Optional[EvaTaskTarget] = Field(
+        default=None, title="Target Detail", description="Target detail"
     )
-    QPS: int = Field(title="QPS", description="QPS limit")
+    AvgScore: Optional[float] = Field(default=None, title="Average Score")
+    MaxScore: Optional[float] = Field(default=None, title="Max Score")
+    Percent: Optional[float] = Field(default=None, title="Percentage")
+    ScoreMap: Optional[Dict[int, float]] = Field(default=None, title="Score Map")
+    Duration: Optional[int] = Field(default=None, title="Duration")
+    CostTokens: Optional[int] = Field(default=None, title="Cost Tokens")
+    MinScore: Optional[float] = Field(default=None, title="Min Score")
+    PCT50Score: Optional[float] = Field(default=None, title="PCT50 Score")
+    PCT90Score: Optional[float] = Field(default=None, title="PCT90 Score")
+    PCT99Score: Optional[float] = Field(default=None, title="PCT99 Score")
 
 
-class EvaReportRuleTarget(BaseModel):
-    """Evaluation report rule target"""
-
-    TargetID: str = Field(title="Target ID", description="Target ID")
-    TargetDetail: EvaReportTargetDetail = Field(
-        title="Target Details", description="Target details"
-    )
-    AvgScore: Optional[float] = Field(
-        title="Average Score", description="Average score"
-    )
-    Percent: Optional[float] = Field(title="Percentage", description="Percentage")
-    ScoreMap: Optional[Dict[str, Any]] = Field(
-        title="Score Map", description="Score mapping"
-    )
-    Duration: int = Field(title="Duration", description="Duration in milliseconds")
-    CostTokens: int = Field(
-        title="Cost Tokens", description="Number of tokens consumed"
-    )
-
-
-class EvaReportRule(BaseModel):
-    """Evaluation report rule"""
-
+class GetEvaTaskReportRule(BaseModel):
     RuleID: str = Field(title="Rule ID", description="Rule ID")
-    Targets: List[EvaReportRuleTarget] = Field(
-        title="Target List", description="List of targets under the rule"
+    Targets: List[GetEvaTaskReportRuleTarget] = Field(
+        title="Targets", description="Targets under the rule"
     )
 
 
-class EvaReportTarget(BaseModel):
-    """Evaluation report target"""
-
+class GetEvaTaskReportTarget(BaseModel):
     TargetID: str = Field(title="Target ID", description="Target ID")
-    TargetDetail: EvaReportTargetDetail = Field(
-        title="Target Details", description="Target details"
+    TargetDetail: Optional[EvaTaskTarget] = Field(
+        default=None, title="Target Detail", description="Target detail"
     )
-    Duration: int = Field(title="Duration", description="Duration in milliseconds")
-    CostTokens: int = Field(
-        title="Total Cost Tokens", description="Total number of tokens consumed"
-    )
-    AvgCostTokens: float = Field(
-        title="Average Cost Tokens", description="Average number of tokens consumed"
-    )
-    AvgDuration: float = Field(
-        title="Average Duration", description="Average duration in milliseconds"
-    )
-    AvgTTFT: float = Field(
-        title="Average Time to First Token",
-        description="Average time to first token in milliseconds",
+    Duration: Optional[int] = Field(default=None, title="Duration")
+    CostTokens: Optional[int] = Field(default=None, title="Cost Tokens")
+    AvgCostTokens: Optional[float] = Field(default=None, title="Avg Cost Tokens")
+    AvgDuration: Optional[float] = Field(default=None, title="Avg Duration")
+    AvgTTFT: Optional[float] = Field(default=None, title="Avg TTFT")
+    MaxCostTokens: Optional[int] = Field(default=None, title="Max Cost Tokens")
+    MaxDuration: Optional[int] = Field(default=None, title="Max Duration")
+    MaxTTFT: Optional[int] = Field(default=None, title="Max TTFT")
+    ShieldEvaReportURL: Optional[str] = Field(
+        default=None, title="ShieldEvaReportURL", description="Shield eva report URL"
     )
 
 
 class GetEvaTaskReportResponse(BaseModel):
-    """Get evaluation task report response"""
-
-    Rules: List[EvaReportRule] = Field(
-        title="Rules List", description="Evaluation rules list"
+    Rules: Optional[List[GetEvaTaskReportRule]] = Field(default=None, title="Rules")
+    Targets: Optional[List[GetEvaTaskReportTarget]] = Field(
+        default=None, title="Targets"
     )
-    Targets: List[EvaReportTarget] = Field(
-        title="Targets List", description="Evaluation targets list"
-    )
-    CreatedAt: str = Field(title="Created At", description="Creation time")
-    UpdatedAt: str = Field(title="Updated At", description="Update time")
-    CreatedBy: str = Field(title="Created By", description="Creator")
-    UpdatedBy: str = Field(title="Updated By", description="Updater")
-
-    # For compatibility, add some properties
-    @property
-    def Status(self) -> str:
-        """Task status (inferred from data)"""
-        return "completed" if self.Rules else "running"
-
-    @property
-    def TaskID(self) -> Optional[str]:
-        """Task ID (get from targets if available)"""
-        return None  # Actual API doesn't return this field
-
-    @property
-    def TaskName(self) -> Optional[str]:
-        """Task name (actual API doesn't return this field)"""
-        return None
+    CreatedAt: str = Field(title="Created At")
+    UpdatedAt: str = Field(title="Updated At")
+    CreatedBy: str = Field(title="Created By")
+    UpdatedBy: str = Field(title="Updated By")
 
 
 # Ruleset related types
@@ -830,14 +811,9 @@ class EvaTaskItemRulesetRule(BaseModel):
 class EvaTaskItemRuleset(BaseModel):
     """Task ruleset"""
 
-    RulesetID: str = Field(
-        title="Evaluation Ruleset ID", description="Evaluation ruleset ID"
-    )
-    RulesetName: str = Field(
-        title="Evaluation Ruleset Name", description="Evaluation ruleset name"
-    )
-    IsDeleted: bool = Field(
-        title="Is Deleted", description="Whether it has been deleted"
+    RuleSource: EvaTaskRuleSource = Field(default=None, title="Rule Source", description="Rule source")
+    Ruleset: Optional[dict] = Field(
+        default=None, title="Evaluation Ruleset", description="Evaluation Ruleset"
     )
     Rules: Optional[List[EvaTaskItemRulesetRule]] = Field(
         default=None,
@@ -969,8 +945,8 @@ class EvaTaskItem(BaseModel):
         default=None, title="Task Template", description="Task template"
     )
     TargetType: str = Field(title="Task Type", description="Task type")
-    Ruleset: EvaTaskItemRuleset = Field(
-        title="Task Evaluation Ruleset", description="Task evaluation ruleset"
+    Rule: Optional[EvaTaskItemRuleset] = Field(
+        default=None, title="Task Evaluation Ruleset", description="Task evaluation ruleset"
     )
     Dataset: EvaTaskItemDataset = Field(
         title="Task Evaluation Dataset", description="Task evaluation dataset"
@@ -991,6 +967,7 @@ class GetEvaTaskRequest(BaseModel):
     """Get evaluation task request"""
 
     WorkspaceID: str = Field(title="Workspace ID", description="Workspace ID")
+    Source: EvaTaskSource = Field(title="Task Source", description="Task Source")
     TaskID: Optional[str] = Field(default=None, title="Task ID", description="Task ID")
     TaskName: Optional[str] = Field(
         default=None, title="Task Name", description="Task name"

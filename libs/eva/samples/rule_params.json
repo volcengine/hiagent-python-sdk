@@ -1,0 +1,38 @@
+[
+  {
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
+    "Param": {
+      "Name": "input",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Dataset",
+      "Field": "input",
+      "Type": "String"
+    }
+  },
+  {
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
+    "Param": {
+      "Name": "reference_output",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Dataset",
+      "Field": "reference_output",
+      "Type": "String"
+    }
+  },
+  {
+    "RuleID": "rule_id1",
+    "RuleVersionID": "rule_version_id1",
+    "Param": {
+      "Name": "generated_output",
+      "Required": false,
+      "Builtin": false,
+      "Source": "Target",
+      "Field": "generated_output",
+      "Type": "String"
+    }
+  }
+]
