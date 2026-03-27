@@ -99,8 +99,10 @@ class ObserveService(Service):
                     示例值: 3600
 
         """
+        if hasattr(params, "model_dump"):
+            params = params.model_dump()
         return observe_types.CreateApiTokenResponse.model_validate(
-            self.__request("CreateApiToken", params.model_dump())
+            self.__request("CreateApiToken", params)
         )
 
     def ListTraceSpans(
@@ -119,6 +121,10 @@ class ObserveService(Service):
             Dict:
 
         """
+        if hasattr(params, "model_dump"):
+            params = params.model_dump()
+        if isinstance(params, dict) and params.get("LastID", None) == "":
+            params.pop("LastID", None)
         return observe_types.ListTraceSpansResponse.model_validate(
             self.__request("ListTraceSpans", params)
         )

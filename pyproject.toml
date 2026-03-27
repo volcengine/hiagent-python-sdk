@@ -30,3 +30,8 @@ dev = [
     "chainlit>=2.2.1",
     "langchain-ollama>=0.3.3",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: real backend end-to-end tests",
+]

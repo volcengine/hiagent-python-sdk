@@ -1,0 +1,25 @@
+{
+  "skill_name": "hiagent-cli",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "在这个仓库里我没安装 cli-anything-hiagent。请给出最稳妥的方式查看 CLI 版本与帮助，并确保命令不进入交互式 REPL。",
+      "expected_output": "给出 python -m 入口的非交互命令（--version / --help），并解释为何不会进入 REPL。"
+    },
+    {
+      "id": 1,
+      "prompt": "我想在一个干净的项目目录里写入 app-key/workspace-id 配置，并验证 config show 能同时展示 effective 与 project 两层配置。请给出完整命令序列。",
+      "expected_output": "给出带 --project 的 config set/show 命令序列，并说明配置文件会写入 <project>/.hiagent/config.json。"
+    },
+    {
+      "id": 2,
+      "prompt": "在同一个 --project 目录下演示 session 的完整生命周期：create/list/show/delete，全程使用 JSON 输出。",
+      "expected_output": "给出带 --json 与 --project 的 session create/list/show/delete 命令序列，并说明返回结构中的 success/message/data 关键字段。"
+    },
+    {
+      "id": 3,
+      "prompt": "我需要用 observe 模块：先创建 API Token，然后列出最近的 trace spans（按 StartTime 倒序），并给出分页下一页的做法。请同时说明鉴权的前置条件与最常见报错的排查顺序。",
+      "expected_output": "给出 observe token create 与 observe trace list 的完整命令（含 sort/page-size/last-id），明确 last-id 可使用上一页最后一条 item 的 DocID；并说明 VOLC_ACCESSKEY/VOLC_SECRETKEY 或 ~/.volc/.env 的要求与排障步骤。"
+    }
+  ]
+}
