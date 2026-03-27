@@ -21,15 +21,12 @@
 which cli-anything-hiagent
 
 # 安装方式
-# 方式1: 通过 pip 安装
-pip install cli-anything-hiagent
+# 方式1: 通过仓库路径安装
+pip install git+https://github.com/volcengine/hiagent-python-sdk.git#subdirectory=agent-harness
 
-# 方式2: 通过 uv 安装（推荐）
-uv pip install cli-anything-hiagent
-
-# 方式3: 本地开发安装
+# 方式2: 本地开发安装
 cd 到下载的 hiagent-python-sdk 目录, 执行以下命令安装
-uv pip install -e agent-harness
+pip install -e agent-harness
 ```
 
 ### 2. 配置环境变量
