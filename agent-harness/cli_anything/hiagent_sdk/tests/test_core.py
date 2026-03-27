@@ -224,6 +224,7 @@ class TestSessionManager:
         assert "session2" in sessions
         assert "session3" in sessions
 
+
     def test_session_delete(self, temp_session_manager):
         """Test deleting a session."""
         temp_session_manager.create_session(name="test-session")
@@ -277,6 +278,33 @@ class TestSessionManager:
         retrieved = temp_session_manager.get_session("test-session")
         assert retrieved is not None
         assert retrieved.metadata["new_key"] == "new_value"
+
+
+def test_service_manager_sets_chat_app_base_url(monkeypatch):
+    import sys
+    import types
+
+    class _DummyChatService:
+        def __init__(self, endpoint: str, region: str):
+            self.endpoint = endpoint
+            self.region = region
+            self.base_url = None
+
+        def set_app_base_url(self, base_url: str):
+            self.base_url = base_url
+
+    pkg = types.ModuleType("hiagent_api")
+    mod = types.ModuleType("hiagent_api.chat")
+    mod.ChatService = _DummyChatService
+
+    monkeypatch.setitem(sys.modules, "hiagent_api", pkg)
+    monkeypatch.setitem(sys.modules, "hiagent_api.chat", mod)
+
+    manager = ServiceManager(
+        {"endpoint": "https://test.com", "region": "cn-north-1", "app_base_url": "http://base"}
+    )
+    svc = manager.get_chat_service()
+    assert svc.base_url == "http://base"
 
 
 class TestServiceManager:

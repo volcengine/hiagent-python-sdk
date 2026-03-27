@@ -52,6 +52,9 @@ class ServiceManager:
         """Get the region."""
         return self.config.get("region", "cn-north-1")
 
+    def get_app_base_url(self) -> Optional[str]:
+        return self.config.get("app_base_url")
+
     def get_chat_service(self):
         """Get or create ChatService."""
         try:
@@ -64,6 +67,9 @@ class ServiceManager:
                 endpoint=self.get_endpoint(),
                 region=self.get_region()
             )
+            app_base_url = self.get_app_base_url()
+            if app_base_url and hasattr(self._services["chat"], "set_app_base_url"):
+                self._services["chat"].set_app_base_url(app_base_url)
         return self._services["chat"]
 
     def get_tool_service(self):

@@ -281,17 +281,17 @@ def chat_send(
 
         req = ChatRequest(
             app_key=app_key,
-            conversation_id=conversation_id,
+            app_conversation_id=conversation_id,
             query=query,
             user_id=user_id,
-            stream=stream,
+            response_mode="streaming" if stream else "blocking",
         )
 
         if stream:
             # Handle streaming
             events = []
-            for event in ctx.service_manager.get_chat_service().chat(
-                app_key=app_key, req=req
+            for event in ctx.service_manager.get_chat_service().chat_streaming(
+                app_key=app_key, chat=req
             ):
                 events.append(event.model_dump() if hasattr(event, "model_dump") else str(event))
 
@@ -300,7 +300,7 @@ def chat_send(
             )
         else:
             # Non-streaming
-            resp = ctx.service_manager.get_chat_service().chat(app_key=app_key, req=req)
+            resp = ctx.service_manager.get_chat_service().chat_blocking(app_key=app_key, chat=req)
             ctx.exporter.print_result(
                 resp.model_dump() if hasattr(resp, "model_dump") else resp,
                 True,
