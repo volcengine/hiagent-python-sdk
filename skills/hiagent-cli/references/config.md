@@ -6,20 +6,20 @@
 
 - 配置落盘路径：`<PROJECT_ROOT>/.hiagent/config.json`
 - effective 优先级：环境变量与 `~/.volc/.env` 覆盖项目配置
-- 推荐始终显式使用 `--project <PROJECT_ROOT>`，避免污染当前目录
+- 推荐始终显式使用 ``，避免污染当前目录
 
 ## 常用命令
 
 查看两层配置：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> config show
+<CMD> --json  config show
 ```
 
 写入项目配置（只写入你传入的字段）：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> config set \
+<CMD> --json  config set \
   --app-key <APP_KEY> \
   --workspace-id <WORKSPACE_ID> \
   --endpoint "https://open.volcengineapi.com" \

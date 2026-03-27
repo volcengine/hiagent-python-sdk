@@ -12,7 +12,7 @@
 创建会话：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> session create <NAME> \
+<CMD> --json  session create <NAME> \
   --conversation-id <CONV_ID> \
   --workflow-id <WF_ID> \
   --tool-id <TOOL_ID> \
@@ -22,19 +22,19 @@
 列出会话：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> session list
+<CMD> --json  session list
 ```
 
 查看会话：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> session show <NAME>
+<CMD> --json  session show <NAME>
 ```
 
 删除会话：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> session delete <NAME>
+<CMD> --json  session delete <NAME>
 ```
 
 ## 常见错误

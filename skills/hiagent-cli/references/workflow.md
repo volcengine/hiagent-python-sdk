@@ -15,7 +15,7 @@
 获取工作流信息：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> workflow get \
+<CMD> --json  workflow get \
   --workspace-id <WORKSPACE_ID> \
   --workflow-id <WF_ID>
 ```
@@ -23,7 +23,7 @@
 同步运行（非流式）：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> workflow run \
+<CMD> --json  workflow run \
   --app-key <APP_KEY> \
   --workspace-id <WORKSPACE_ID> \
   --workflow-id <WF_ID> \
@@ -34,7 +34,7 @@
 流式运行：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> workflow run \
+<CMD> --json  workflow run \
   --app-key <APP_KEY> \
   --workspace-id <WORKSPACE_ID> \
   --workflow-id <WF_ID> \
@@ -46,7 +46,7 @@
 异步运行 + 查询状态：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> workflow run \
+<CMD> --json  workflow run \
   --app-key <APP_KEY> \
   --workspace-id <WORKSPACE_ID> \
   --workflow-id <WF_ID> \
@@ -54,7 +54,7 @@
   --input @input.json \
   --async
 
-<CMD> --json --project <PROJECT_ROOT> workflow status \
+<CMD> --json  workflow status \
   --app-key <APP_KEY> \
   --run-id <RUN_ID> \
   --user-id <USER_ID>

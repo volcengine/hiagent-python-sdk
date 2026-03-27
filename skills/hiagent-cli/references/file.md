@@ -13,7 +13,7 @@
 上传：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> file upload \
+<CMD> --json  file upload \
   --file ./document.pdf \
   --expire 15h \
   --content-type application/pdf
@@ -22,7 +22,7 @@
 下载：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> file download \
+<CMD> --json  file download \
   --path "<REMOTE_PATH>" \
   --output ./document.pdf
 ```

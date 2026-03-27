@@ -199,9 +199,14 @@ cli-anything-hiagent config show
 
 **解决**:
 ```bash
-# 检查安装
+# 检查是否已安装，已经安装则跳过安装
 which cli-anything-hiagent
 
-# 重新安装
-pip install --upgrade cli-anything-hiagent
+# 安装方式
+# 方式1: 通过仓库路径安装
+pip install git+https://github.com/volcengine/hiagent-python-sdk.git#subdirectory=agent-harness
+
+# 方式2: 本地开发安装
+cd 到下载的 hiagent-python-sdk 目录, 执行以下命令安装
+pip install -e agent-harness
 ```

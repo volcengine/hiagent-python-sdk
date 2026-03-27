@@ -13,7 +13,7 @@
 内联 JSON 输入：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> tool execute \
+<CMD> --json  tool execute \
   --workspace-id <WORKSPACE_ID> \
   --tool-id <TOOL_ID> \
   --input '{"input":"test"}'
@@ -22,7 +22,7 @@
 文件输入：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> tool execute \
+<CMD> --json  tool execute \
   --workspace-id <WORKSPACE_ID> \
   --tool-id <TOOL_ID> \
   --input @input.json
@@ -31,7 +31,7 @@
 显式指定 plugin/name（避免额外请求）：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> tool execute \
+<CMD> --json  tool execute \
   --workspace-id <WORKSPACE_ID> \
   --tool-id <TOOL_ID> \
   --plugin-id <PLUGIN_ID> \

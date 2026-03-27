@@ -14,7 +14,7 @@
 创建对话：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> chat create \
+<CMD> --json  chat create \
   --app-key <APP_KEY> \
   --user-id <USER_ID> \
   -v name=my_agent \
@@ -24,7 +24,7 @@
 发送消息（非流式）：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> chat send \
+<CMD> --json  chat send \
   --app-key <APP_KEY> \
   --conversation-id <CONV_ID> \
   --user-id <USER_ID> \
@@ -34,7 +34,7 @@
 发送消息（流式）：
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> chat send \
+<CMD> --json  chat send \
   --app-key <APP_KEY> \
   --conversation-id <CONV_ID> \
   --user-id <USER_ID> \

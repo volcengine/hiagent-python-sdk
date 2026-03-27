@@ -11,7 +11,7 @@
 ## 常用命令
 
 ```bash
-<CMD> --json --project <PROJECT_ROOT> knowledge retrieve \
+<CMD> --json  knowledge retrieve \
   --workspace-id <WORKSPACE_ID> \
   --dataset-ids ds-001,ds-002 \
   -q "query" \
