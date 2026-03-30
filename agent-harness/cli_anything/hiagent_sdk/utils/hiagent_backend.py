@@ -100,6 +100,7 @@ def download_file(
     path: str,
     save_to: Path,
     key: Optional[str] = None,
+    up_download_service: Optional[UpService] = None,
 ) -> dict:
     ensure_volc_credentials()
     save_to.parent.mkdir(parents=True, exist_ok=True)
@@ -109,7 +110,7 @@ def download_file(
         key = key_resp.Key
 
     req = up_types.DownloadRequest(Key=key, Path=path, SaveTo=str(save_to))
-    up_service.Download(req)
+    (up_download_service or up_service).Download(req)
 
     size = save_to.stat().st_size if save_to.exists() else 0
     return {

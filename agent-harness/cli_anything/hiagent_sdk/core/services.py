@@ -1,6 +1,5 @@
 """Service initialization and management for HiAgent SDK CLI."""
 
-import os
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -54,6 +53,12 @@ class ServiceManager:
 
     def get_app_base_url(self) -> Optional[str]:
         return self.config.get("app_base_url")
+
+    def get_up_upload_endpoint(self) -> Optional[str]:
+        return self.config.get("up_upload_endpoint")
+
+    def get_up_download_endpoint(self) -> Optional[str]:
+        return self.config.get("up_download_endpoint")
 
     def get_chat_service(self):
         """Get or create ChatService."""
@@ -143,18 +148,41 @@ class ServiceManager:
         return self._services["observe"]
 
     def get_up_service(self):
-        """Get or create UpService."""
+        return self.get_up_upload_service()
+
+    def get_up_upload_service(self):
+        """Get or create UpService for upload-related actions."""
         try:
             from hiagent_api.up import UpService
         except ModuleNotFoundError as e:
             raise _missing_dep_error("hiagent-api") from e
 
-        if "up" not in self._services:
-            self._services["up"] = UpService(
-                endpoint=self.get_endpoint(),
+        if "up_upload" not in self._services:
+            endpoint = self.get_up_upload_endpoint() or self.get_endpoint()
+            self._services["up_upload"] = UpService(
+                endpoint=endpoint,
                 region=self.get_region()
             )
-        return self._services["up"]
+        return self._services["up_upload"]
+
+    def get_up_download_service(self):
+        """Get or create UpService for download actions."""
+        try:
+            from hiagent_api.up import UpService
+        except ModuleNotFoundError as e:
+            raise _missing_dep_error("hiagent-api") from e
+
+        if "up_download" not in self._services:
+            endpoint = (
+                self.get_up_download_endpoint()
+                or self.get_up_upload_endpoint()
+                or self.get_endpoint()
+            )
+            self._services["up_download"] = UpService(
+                endpoint=endpoint,
+                region=self.get_region()
+            )
+        return self._services["up_download"]
 
     def init_agent(
         self,

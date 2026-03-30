@@ -110,6 +110,8 @@ def config_show(ctx: CLIContext):
 @click.option("--endpoint", help="HiAgent API endpoint")
 @click.option("--region", help="HiAgent region")
 @click.option("--app-base-url", help="HiAgent App Base URL")
+@click.option("--up-upload-endpoint", help="UP upload endpoint")
+@click.option("--up-download-endpoint", help="UP download endpoint")
 @click.option("--user-id", help="Default user ID")
 @click.pass_obj
 def config_set(ctx: CLIContext, **kwargs):
@@ -614,7 +616,7 @@ def file_upload(
         from cli_anything.hiagent_sdk.utils.hiagent_backend import upload_raw_file
 
         result = upload_raw_file(
-            ctx.service_manager.get_up_service(),
+            ctx.service_manager.get_up_upload_service(),
             file_path=file_path,
             file_id=file_id,
             expire=expire,
@@ -644,10 +646,11 @@ def file_download(ctx: CLIContext, remote_path: str, key: Optional[str], output_
         from cli_anything.hiagent_sdk.utils.hiagent_backend import download_file
 
         result = download_file(
-            ctx.service_manager.get_up_service(),
+            ctx.service_manager.get_up_upload_service(),
             path=remote_path,
             save_to=output_path,
             key=key,
+            up_download_service=ctx.service_manager.get_up_download_service(),
         )
         ctx.exporter.print_result(result, True, f"File downloaded to: {output_path}")
 

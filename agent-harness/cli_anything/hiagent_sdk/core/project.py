@@ -25,6 +25,8 @@ class ProjectConfig(BaseModel):
     )
     region: str = Field(default="cn-north-1", description="HiAgent region")
     app_base_url: Optional[str] = Field(default=None, description="HiAgent App Base URL")
+    up_upload_endpoint: Optional[str] = Field(default=None, description="UP upload endpoint")
+    up_download_endpoint: Optional[str] = Field(default=None, description="UP download endpoint")
     user_id: Optional[str] = Field(default=None, description="Default user ID")
     conversation_id: Optional[str] = Field(default=None, description="Default conversation ID")
     tool_id: Optional[str] = Field(default=None, description="Default tool ID")
@@ -101,6 +103,12 @@ class Project:
             or "cn-north-1",
             "app_base_url": os.getenv("HIAGENT_APP_BASE_URL")
             or str(dotenv_data.get("HIAGENT_APP_BASE_URL") or "").strip()
+            or None,
+            "up_upload_endpoint": os.getenv("HIAGENT_UP_UPLOAD_ENDPOINT")
+            or str(dotenv_data.get("HIAGENT_UP_UPLOAD_ENDPOINT") or "").strip()
+            or None,
+            "up_download_endpoint": os.getenv("HIAGENT_UP_DOWNLOAD_ENDPOINT")
+            or str(dotenv_data.get("HIAGENT_UP_DOWNLOAD_ENDPOINT") or "").strip()
             or None,
             "app_key": os.getenv("HIAGENT_AGENT_APP_KEY")
             or os.getenv("HIAGENT_APP_KEY")
