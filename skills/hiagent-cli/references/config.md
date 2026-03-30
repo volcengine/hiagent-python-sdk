@@ -22,8 +22,8 @@
 <CMD> --json  config set \
   --app-key <APP_KEY> \
   --workspace-id <WORKSPACE_ID> \
-  --endpoint "https://open.volcengineapi.com" \
-  --region "cn-north-1" \
+  --endpoint <HIAGENT_TOP_ENDPOINT> \
+  --region <HIAGENT_REGION> \
   --app-base-url <APP_BASE_URL> \
   --user-id <USER_ID>
 ```

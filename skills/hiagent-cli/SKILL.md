@@ -1,6 +1,9 @@
-# hiagent-cli
+---
+name: hiagent-cli
+description: 当用户想管理 HiAgent 配置、观测(observe)时、会话(session)、对话(chat)、工作流(workflow)、工具(tool)、知识库(knowledge)、文件上传下载(up)时，务必使用这个技能给出可直接执行的命令与排障步骤。尤其适用于用户提到 agent-harness、cli_anything、--project、--json、app-key、workspace-id、VOLC_ACCESSKEY/VOLC_SECRETKEY、.hiagent/config.json，以及希望用命令行(cli-anything-hiagent / python -m cli_anything.hiagent_sdk)。
+---
 
-> 当用户想管理 HiAgent 配置、观测(observe)时、会话(session)、对话(chat)、工作流(workflow)、工具(tool)、知识库(knowledge)、文件上传下载(up)时，务必使用这个技能给出可直接执行的命令与排障步骤。尤其适用于用户提到 agent-harness、cli_anything、--project、--json、app-key、workspace-id、VOLC_ACCESSKEY/VOLC_SECRETKEY、.hiagent/config.json，以及希望用命令行(cli-anything-hiagent / python -m cli_anything.hiagent_sdk)。
+# hiagent-cli
 
 ## 作用域
 
@@ -22,10 +25,12 @@ which cli-anything-hiagent
 
 # 安装方式
 # 方式1: 通过仓库路径安装
-pip install git+https://github.com/volcengine/hiagent-python-sdk.git#subdirectory=agent-harness
+pip install git+https://github.com/volcengine/hiagent-python-sdk.git@feat/skill#subdirectory=agent-harness
 
 # 方式2: 本地开发安装
-cd 到下载的 hiagent-python-sdk 目录, 执行以下命令安装
+# 如果未下载仓库，先下载仓库
+git clone https://github.com/volcengine/hiagent-python-sdk.git@feat/skill
+# 到 hiagent-python-sdk 目录下执行以下命令
 pip install -e agent-harness
 ```
 
@@ -57,62 +62,62 @@ cli-anything-hiagent config set-project your_project
 
 ```bash
 # 列出会话
-cli-anything-hiagent session list --project your_project
+cli-anything-hiagent session list
 
 # 创建会话
-cli-anything-hiagent session create --project your_project --name "新会话"
+cli-anything-hiagent session create --name "新会话"
 
 # 获取会话详情
-cli-anything-hiagent session get --project your_project --session-id xxx
+cli-anything-hiagent session get --session-id xxx
 
 # 删除会话
-cli-anything-hiagent session delete --project your_project --session-id xxx
+cli-anything-hiagent session delete --session-id xxx
 ```
 
 ### Chat 对话
 
 ```bash
 # 发送消息
-cli-anything-hiagent chat send --project your_project --session-id xxx --message "你好"
+cli-anything-hiagent chat send --session-id xxx --message "你好"
 
 # 流式对话
-cli-anything-hiagent chat send --project your_project --session-id xxx --message "你好" --stream
+cli-anything-hiagent chat send --session-id xxx --message "你好" --stream
 ```
 
 ### Workflow 工作流
 
 ```bash
 # 列出工作流
-cli-anything-hiagent workflow list --project your_project
+cli-anything-hiagent workflow list
 
 # 运行工作流
-cli-anything-hiagent workflow run --project your_project --workflow-id xxx --input '{"key": "value"}'
+cli-anything-hiagent workflow run --workflow-id xxx --input '{"key": "value"}'
 
 # 获取工作流详情
-cli-anything-hiagent workflow get --project your_project --workflow-id xxx
+cli-anything-hiagent workflow get --workflow-id xxx
 ```
 
 ### Tool 工具
 
 ```bash
 # 列出工具
-cli-anything-hiagent tool list --project your_project
+cli-anything-hiagent tool list
 
 # 调用工具
-cli-anything-hiagent tool call --project your_project --tool-id xxx --params '{"param1": "value1"}'
+cli-anything-hiagent tool call --tool-id xxx --params '{"param1": "value1"}'
 ```
 
 ### Knowledge 知识库
 
 ```bash
 # 列出知识库
-cli-anything-hiagent knowledge list --project your_project
+cli-anything-hiagent knowledge list
 
 # 上传文档
-cli-anything-hiagent knowledge upload --project your_project --knowledge-id xxx --file /path/to/file.pdf
+cli-anything-hiagent knowledge upload --knowledge-id xxx --file /path/to/file.pdf
 
 # 搜索知识库
-cli-anything-hiagent knowledge search --project your_project --knowledge-id xxx --query "搜索内容"
+cli-anything-hiagent knowledge search --knowledge-id xxx --query "搜索内容"
 ```
 
 ### Observe 观测
@@ -138,10 +143,10 @@ cli-anything-hiagent --json observe trace list \
 
 ```bash
 # 上传文件
-cli-anything-hiagent up upload --project your_project --file /path/to/file
+cli-anything-hiagent up upload --file /path/to/file
 
 # 下载文件
-cli-anything-hiagent up download --project your_project --file-id xxx --output /path/to/save
+cli-anything-hiagent up download --file-id xxx --output /path/to/save
 ```
 
 ## 全局参数
@@ -204,9 +209,11 @@ which cli-anything-hiagent
 
 # 安装方式
 # 方式1: 通过仓库路径安装
-pip install git+https://github.com/volcengine/hiagent-python-sdk.git#subdirectory=agent-harness
+pip install git+https://github.com/volcengine/hiagent-python-sdk.git@feat/skill#subdirectory=agent-harness
 
 # 方式2: 本地开发安装
-cd 到下载的 hiagent-python-sdk 目录, 执行以下命令安装
+# 如果未下载仓库，先下载仓库
+git clone https://github.com/volcengine/hiagent-python-sdk.git@feat/skill
+# 到 hiagent-python-sdk 目录下执行以下命令
 pip install -e agent-harness
 ```
