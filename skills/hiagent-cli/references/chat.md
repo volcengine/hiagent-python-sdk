@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - `chat create` 用于创建 conversation（返回 `app_conversation_id`）
 - `chat send` 用于向 conversation 发送 query
 - `--user-id` 可省略（会从 config 取默认值），缺省时使用 `cli-user`

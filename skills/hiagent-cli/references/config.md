@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - 配置落盘路径：`<PROJECT_ROOT>/.hiagent/config.json`
 - effective 优先级：环境变量与 `~/.volc/.env` 覆盖项目配置
 - 推荐始终显式使用 ``，避免污染当前目录

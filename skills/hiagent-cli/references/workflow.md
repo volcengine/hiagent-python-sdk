@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - `workflow get`：查看工作流元信息（优先用它确认 inputs 结构，避免猜字段）
 - `workflow run`：
   - `--stream`：返回事件列表（调试友好）

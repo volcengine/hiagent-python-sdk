@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - 必填：`--workspace-id`、`--tool-id`
 - 可选：`--plugin-id`、`--name`，不传时 CLI 会先调用 `get_archived_tool` 补齐
 - `--input` 为 JSON 字符串，或 `@path/to/input.json`

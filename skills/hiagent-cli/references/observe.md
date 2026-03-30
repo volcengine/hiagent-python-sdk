@@ -4,6 +4,7 @@
 
 对应子命令：
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - `observe token create`
 - `observe trace list`
 

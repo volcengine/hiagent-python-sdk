@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - 该模块会强制检查火山鉴权（`VOLC_ACCESSKEY`/`VOLC_SECRETKEY` 或 `~/.volc/.env`）
 - `upload` 返回 `path`，用于后续 `download --path`
 - `download --key` 可省略，CLI 会先自动获取 DownloadKey

@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - 会话落盘路径：`<PROJECT_ROOT>/.hiagent/sessions/<NAME>.json`
 - 建议全程加 `--json`，方便脚本化与可测试
 

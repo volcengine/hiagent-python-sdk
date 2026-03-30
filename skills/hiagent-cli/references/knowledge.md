@@ -4,6 +4,7 @@
 
 ## 关键点
 
+- `<CMD>` 命令是 `cli-anything-hiagent`
 - 使用 `hiagent_components.retriever.KnowledgeRetriever` 进行检索
 - `--dataset-ids` 为逗号分隔：`ds-001,ds-002`
 - `--top-k`、`--score-threshold` 控制召回数量与阈值
