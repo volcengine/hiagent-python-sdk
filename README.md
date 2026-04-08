@@ -10,6 +10,10 @@ including a rich set of development components and application example code.
 
 ![img.png](img.png)
 
+Documentation
+
+Access the document at [document address](https://bytedance.larkoffice.com/docx/EnpxdRL18oxsrqxubHjcylTDnif) to obtain the documentation.
+
 ## Quick Start
 
 ``` python
