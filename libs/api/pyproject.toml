@@ -5,7 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "volcengine>=1.0.187",
+    "volcengine>=1.0.219",
     "httpx>=0.28.1",
     "httpx-sse>=0.4.0",
     "aiofiles>=23.1.0",
