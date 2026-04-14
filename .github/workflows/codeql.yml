@@ -1,0 +1,19 @@
+name: CodeQL
+on:
+  push:
+    branches: [ main, fix/cve ]  # 你要扫描的分支
+  pull_request:
+    branches: [ main, fix/cve ]
+  schedule:
+    - cron: '30 2 * * *'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/analyze@v3
