@@ -1075,7 +1075,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [{ name = "langchain-openai", specifier = ">=0.3.25" }]
 integrations = [
-    { name = "langchain-core", specifier = ">=0.3.0" },
+    { name = "langchain-core", specifier = ">=0.3.84" },
     { name = "mcp", specifier = ">=1.9.4" },
 ]
 
@@ -1137,7 +1137,7 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "chainlit", specifier = ">=2.2.1" }]
+dev = [{ name = "chainlit", specifier = ">=2.9.4" }]
 
 [[package]]
 name = "hiagent-sdk-monorepo"
@@ -1187,8 +1187,8 @@ dev = [
     { name = "protobuf", specifier = ">=5.29.6" },
     { name = "pygments", specifier = ">=2.20.0" },
     { name = "pyjwt", specifier = ">=2.12.0" },
-    { name = "pytest", specifier = ">=8.4.0" },
-    { name = "python-multipart", specifier = ">=0.0.22" },
+    { name = "pytest", specifier = ">=9.0.3" },
+    { name = "python-multipart", specifier = ">=0.0.26" },
     { name = "python-socketio", specifier = ">=5.14.0" },
     { name = "starlette", specifier = ">=0.49.1" },
     { name = "urllib3", specifier = ">=2.6.3" },
@@ -2782,7 +2782,7 @@ wheels = [
 
 [[package]]
 name = "pycryptodome"
-version = "3.9.9"
+version = "3.19.1"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/c4/3a/5bca2cb1648b171afd6b7d29a11c6bca8b305bb75b7e2d78a0f5c61ff95e/pycryptodome-3.9.9.tar.gz", hash = "sha256:910e202a557e1131b1c1b3f17a63914d57aac55cf9fb9b51644962841c3995c4", size = 15488528, upload-time = "2020-11-03T13:15:26.723Z" }
 
@@ -2930,7 +2930,7 @@ crypto = [
 
 [[package]]
 name = "pytest"
-version = "8.4.0"
+version = "9.0.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama", marker = "sys_platform == 'win32'" },
@@ -2969,7 +2969,7 @@ wheels = [
 
 [[package]]
 name = "python-multipart"
-version = "0.0.24"
+version = "0.0.26"
 source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8a/45/e23b5dc14ddb9918ae4a625379506b17b6f8fc56ca1d82db62462f59aea6/python_multipart-0.0.24.tar.gz", hash = "sha256:9574c97e1c026e00bc30340ef7c7d76739512ab4dfd428fec8c330fa6a5cc3c8", size = 37695, upload-time = "2026-04-05T20:49:13.829Z" }
 wheels = [
