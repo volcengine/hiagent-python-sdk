@@ -20,7 +20,7 @@ members = ["libs/api", "libs/components", "libs/eva", "libs/observe"]
 [dependency-groups]
 dev = [
     "langchain>=0.3.25",
-    "pytest>=8.4.0",
+    "pytest>=9.0.3",
     "hiagent-components",
     "hiagent-api",
     "hiagent-eva",
@@ -34,7 +34,7 @@ dev = [
     "orjson>=3.11.6",
     "protobuf>=5.29.6",
     "PyJWT>=2.12.0",
-    "python-multipart>=0.0.22",
+    "python-multipart>=0.0.26",
     "python-socketio>=5.14.0",
     "marshmallow>=3.26.2",
     "pygments>=2.20.0",
