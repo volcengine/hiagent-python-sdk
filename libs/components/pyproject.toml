@@ -19,7 +19,7 @@ dev = [
 ]
 integrations = [
     "mcp>=1.9.4",
-    "langchain-core>=0.3.0",
+    "langchain-core>=0.3.84",
 ]
 
 [build-system]
