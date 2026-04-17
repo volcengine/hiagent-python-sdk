@@ -71,7 +71,7 @@ typing-extensions==4.14.0
 typing-inspect==0.9.0
 typing-inspection==0.4.1
 uptrace==1.27.0
-urllib3==2.4.0
+urllib3==2.6.3
 uvicorn==0.34.3
 volcengine==1.0.187
 watchfiles==0.20.0
