@@ -1,4 +1,4 @@
-build: build-component build-api build-eva build-observe
+build: build-component build-api build-eva build-observe build-hibot
 
 build-component:
 	uv build --package hiagent-components
@@ -11,3 +11,6 @@ build-eva:
 
 build-observe:
 	uv build --package hiagent-observe
+
+build-hibot:
+	uv build --package hibot
