@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import secrets
 import threading
 
 from .._request import Action
@@ -28,6 +29,16 @@ from .types import (
 )
 
 
+def _generate_conversation_id() -> str:
+    """生成符合 ``^[A-Za-z0-9_-]{1,64}$`` 的 ConversationID。
+
+    使用 16 字节随机数转 32 位 hex，长度与字符集均严格满足，且各端 SDK 共用
+    同一种生成策略。仅在 webchat 渠道下注入。
+    """
+
+    return secrets.token_hex(16)
+
+
 class SessionsService:
     def __init__(self, v1) -> None:
         self._v1 = v1
@@ -48,8 +59,7 @@ class SessionsService:
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         # Peer 仅在显式指定 IM 渠道或按 user 隔离会话时才需要传入；webchat
-        # 主流程下 SDK 注入 webchat / system / agent_id 作为默认值，确保
-        # 服务端 SessionKey 唯一确定。
+        # 主流程下 SDK 注入 webchat / system / agent_id 作为默认值。
         payload = {
             "Channel": "webchat",
             "PeerKind": "system",
@@ -62,6 +72,12 @@ class SessionsService:
                 payload["PeerKind"] = params.peer.peer_kind
             if params.peer.peer_id:
                 payload["PeerID"] = params.peer.peer_id
+        # ConversationID 仅在 webchat 渠道由 SDK 自动生成并透传；其它渠道
+        # 留空，这里直接跳过以避免污染请求体。
+        if payload["Channel"] == "webchat":
+            cid = _generate_conversation_id()
+            if cid:
+                payload["ConversationID"] = cid
         body["Payload"] = payload
         result = self._action("CreateSession", body)
         session = from_dict(V1Session, result) or V1Session()
