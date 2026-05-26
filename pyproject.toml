@@ -13,9 +13,10 @@ hiagent-api = { workspace = true }
 hiagent-components = { workspace = true }
 hiagent-eva = { workspace = true }
 hiagent-observe = { workspace = true }
+hibot = { workspace = true }
 
 [tool.uv.workspace]
-members = ["libs/api", "libs/components", "libs/eva", "libs/observe"]
+members = ["libs/api", "libs/components", "libs/eva", "libs/observe", "libs/hibot"]
 
 [dependency-groups]
 dev = [
@@ -25,6 +26,7 @@ dev = [
     "hiagent-api",
     "hiagent-eva",
     "hiagent-observe",
+    "hibot",
     "mcp>=1.23.0",
     "langchain-core>=0.3.84",
     "chainlit>=2.9.4",
