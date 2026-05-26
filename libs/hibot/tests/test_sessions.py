@@ -35,11 +35,17 @@ def test_create_session_injects_default_peer(client_factory, make_handler, ok_en
     body = json.loads(req.content)
     assert body["AgentID"] == "agent-1"
     assert body["WorkspaceID"] == "ws-1"
-    assert body["Payload"] == {
-        "Channel": "webchat",
-        "PeerKind": "system",
-        "PeerID": "agent-1",
-    }
+    payload = body["Payload"]
+    # ConversationID 由 SDK 自动生成（仅 webchat 渠道）；逐字段断言其余 peer
+    # 默认值，避免与自动注入的 ConversationID 互相干扰。
+    assert payload["Channel"] == "webchat"
+    assert payload["PeerKind"] == "system"
+    assert payload["PeerID"] == "agent-1"
+    cid = payload["ConversationID"]
+    assert isinstance(cid, str) and 1 <= len(cid) <= 64
+    import re
+
+    assert re.fullmatch(r"[A-Za-z0-9_-]+", cid)
 
 
 def test_create_session_with_explicit_peer_overrides_kind_and_id(
@@ -54,11 +60,12 @@ def test_create_session_with_explicit_peer_overrides_kind_and_id(
         )
     )
     body = json.loads(handler.calls[0].content)
-    assert body["Payload"] == {
-        "Channel": "webchat",
-        "PeerKind": "user",
-        "PeerID": "u-77",
-    }
+    payload = body["Payload"]
+    assert payload["Channel"] == "webchat"
+    assert payload["PeerKind"] == "user"
+    assert payload["PeerID"] == "u-77"
+    # webchat 渠道下仍会自动注入 ConversationID。
+    assert "ConversationID" in payload
 
 
 def test_create_session_with_im_channel_passes_through(
@@ -75,11 +82,26 @@ def test_create_session_with_im_channel_passes_through(
         )
     )
     body = json.loads(handler.calls[0].content)
+    # 非 webchat 渠道 SDK 不注入 ConversationID。
     assert body["Payload"] == {
         "Channel": "feishu",
         "PeerKind": "user",
         "PeerID": "ou_xxx",
     }
+
+
+def test_create_session_conversation_ids_are_unique(
+    client_factory, make_handler, ok_envelope
+):
+    handler = make_handler(
+        [ok_envelope({"ID": "s-1"}), ok_envelope({"ID": "s-2"})]
+    )
+    client = client_factory(handler)
+    client.v1.sessions.create(V1SessionNewParams(agent_id="agent-1"))
+    client.v1.sessions.create(V1SessionNewParams(agent_id="agent-1"))
+    cid1 = json.loads(handler.calls[0].content)["Payload"]["ConversationID"]
+    cid2 = json.loads(handler.calls[1].content)["Payload"]["ConversationID"]
+    assert cid1 != cid2
 
 
 def test_chat_uses_remembered_agent_id_and_routes_to_gateway(
