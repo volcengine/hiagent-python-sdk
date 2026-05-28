@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -154,6 +154,11 @@ class TraceSpanItem(BaseModel):
         title="Span 资源信息",
         description="Span 资源信息",
     )
+    IsRootSpan: bool = Field(
+        default=False,
+        title="是否为 root span",
+        description="是否为 root span",
+    )
 
 
 class ListTraceSpansResponse(BaseModel):
@@ -170,4 +175,137 @@ class ListTraceSpansResponse(BaseModel):
     Items: List[TraceSpanItem] = Field(
         title="Span 列表",
         description="Span 列表",
+    )
+
+
+class TraceAIProcessRequest(BaseModel):
+    TenantID: Optional[str] = Field(
+        default=None,
+        title="租户 ID",
+        description="租户 ID",
+    )
+    WorkspaceID: str = Field(
+        title="工作空间 ID", description="工作空间 ID", example="wcxxxxxxxxxxxxxxxxxxx"
+    )
+    TraceIDs: List[str] = Field(
+        title="trace ID 列表",
+        description="trace ID 列表",
+    )
+    IsStream: Optional[bool] = Field(
+        default=False,
+        title="是否 Stream 请求",
+        description="是否 Stream 请求, 默认否",
+    )
+
+
+class AIProcessUsageInputTokensDetails(BaseModel):
+    CachedTokens: Optional[int] = Field(
+        default=None,
+        title="缓存 token 数",
+        description="缓存 token 数",
+    )
+
+
+class AIProcessUsageOutputTokensDetails(BaseModel):
+    ReasoningTokens: Optional[int] = Field(
+        default=None,
+        title="推理 token 数",
+        description="推理 token 数",
+    )
+
+
+class AIProcessUsage(BaseModel):
+    InputTokens: Optional[int] = Field(
+        default=None, title="输入 token 数", description="输入 token 数"
+    )
+    InputTokensDetails: Optional[AIProcessUsageInputTokensDetails] = Field(
+        default=None,
+        title="输入 token 明细",
+        description="输入 token 明细",
+    )
+    OutputTokens: Optional[int] = Field(
+        default=None, title="输出 token 数", description="输出 token 数"
+    )
+    OutputTokensDetails: Optional[AIProcessUsageOutputTokensDetails] = Field(
+        default=None,
+        title="输出 token 明细",
+        description="输出 token 明细",
+    )
+    TotalTokens: Optional[int] = Field(
+        default=None, title="总 token 数", description="总 token 数"
+    )
+
+
+class AIProcessResponse(BaseModel):
+    content: Optional[str] = Field(
+        default=None,
+        title="AI 分析结果",
+        description="AI 分析结果",
+    )
+    reasoning_content: Optional[str] = Field(
+        default=None,
+        title="AI 推理内容",
+        description="AI 推理内容",
+    )
+    err_message: Optional[str] = Field(
+        default=None,
+        title="错误信息",
+        description="错误信息",
+    )
+    usage: Optional[AIProcessUsage] = Field(
+        default=None,
+        title="token 用量",
+        description="token 用量",
+    )
+    latency: Optional[int] = Field(
+        default=None,
+        title="耗时",
+        description="耗时，单位为毫秒",
+    )
+    trace_id: Optional[str] = Field(
+        default=None,
+        title="Trace ID",
+        description="Trace ID",
+    )
+
+
+class GetTraceAIProcessHistoryRequest(BaseModel):
+    WorkspaceID: str = Field(
+        title="工作空间 ID", description="工作空间 ID", example="wcxxxxxxxxxxxxxxxxxxx"
+    )
+    TraceID: str = Field(
+        title="Trace ID",
+        description="Trace ID",
+    )
+    PageSize: Optional[int] = Field(
+        default=None,
+        title="单页数量",
+        description="单页数量",
+    )
+
+
+class GetTraceAIProcessHistoryResponse(BaseModel):
+    Items: List[TraceSpanItem] = Field(
+        title="trace span 列表",
+        description="trace span 列表",
+    )
+
+
+class AlertAIProcessRequest(BaseModel):
+    TenantID: Optional[str] = Field(
+        default=None,
+        title="租户 ID",
+        description="租户 ID",
+    )
+    WorkspaceID: str = Field(
+        title="工作空间 ID", description="工作空间 ID", example="wcxxxxxxxxxxxxxxxxxxx"
+    )
+    RuleID: str = Field(
+        title="告警规则 ID",
+        description="告警规则 ID",
+    )
+    IsStream: Optional[bool] = Field(
+        default=False,
+        title="是否 Stream 请求",
+        description="是否 Stream 请求, 默认否",
     )

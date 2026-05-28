@@ -115,6 +115,7 @@ class Service(object):
             # 先尝试从credentials中读取ak、sk，credentials不存在则从config中读取
             path_ini = os.environ["HOME"] + "/.volc/credentials"
             path_json = os.environ["HOME"] + "/.volc/config"
+            path_env = os.environ["HOME"] + "/.volc/.env"
             if os.path.isfile(path_ini):
                 conf = configparser.ConfigParser()
                 conf.read(path_ini)
@@ -141,6 +142,13 @@ class Service(object):
                         self.service_info.credentials.set_ak(j["ak"])
                     if "sk" in j:
                         self.service_info.credentials.set_sk(j["sk"])
+            elif os.path.isfile(path_env):
+                dotenv_data = dotenv_values(path_env) if os.path.isfile(path_env) else {}
+                ak = os.environ.get("VOLC_ACCESSKEY") or str(dotenv_data.get("VOLC_ACCESSKEY") or "").strip()
+                sk = os.environ.get("VOLC_SECRETKEY") or str(dotenv_data.get("VOLC_SECRETKEY") or "").strip()
+                if ak and sk:
+                    self.service_info.credentials.set_ak(ak)
+                    self.service_info.credentials.set_sk(sk)
 
     def set_ak(self, ak):
         self.service_info.credentials.set_ak(ak)

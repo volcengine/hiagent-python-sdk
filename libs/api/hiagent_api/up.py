@@ -34,13 +34,16 @@ class UpService(Service):
     @staticmethod
     def get_service_info(endpoint, region):
         parsed = urlparse(endpoint)
-        scheme, hostname = parsed.scheme, parsed.hostname + ":" + str(parsed.port)
+        scheme = parsed.scheme
+        hostname = parsed.hostname or ""
+        if parsed.port:
+            hostname = f"{hostname}:{parsed.port}"
         if not scheme or not hostname:
             raise Exception(f"invalid endpoint format: {endpoint}")
         service_info = ServiceInfo(
             hostname,
             {"Accept": "application/json"},
-            Credentials("", "", "observe", region),
+            Credentials("", "", "up", region),
             5,
             5,
             scheme=scheme,

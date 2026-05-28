@@ -42,3 +42,8 @@ dev = [
     "pygments>=2.20.0",
     "langchain-text-splitters>=0.3.9",
 ]
+
+[tool.pytest.ini_options]
+markers = [
+    "e2e: real backend end-to-end tests",
+]

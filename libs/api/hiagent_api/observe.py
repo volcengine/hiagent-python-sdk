@@ -17,6 +17,7 @@ import threading
 from urllib.parse import urlparse
 
 from volcengine.ApiInfo import ApiInfo
+from volcengine.auth.SignerV4 import SignerV4
 from volcengine.base.Service import Service
 from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
@@ -50,7 +51,7 @@ class ObserveService(Service):
             {"Accept": "application/json"},
             Credentials("", "", "observe", region),
             5,
-            5,
+            300,
             scheme=scheme,
         )
         return service_info
@@ -69,6 +70,27 @@ class ObserveService(Service):
                 "POST",
                 "/",
                 {"Action": "ListTraceSpans", "Version": "2025-05-01"},
+                {},
+                {},
+            ),
+            "TraceAIProcess": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "TraceAIProcess", "Version": "2025-05-01"},
+                {},
+                {},
+            ),
+            "GetTraceAIProcessHistory": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "GetTraceAIProcessHistory", "Version": "2025-05-01"},
+                {},
+                {},
+            ),
+            "AlertAIProcess": ApiInfo(
+                "POST",
+                "/",
+                {"Action": "AlertAIProcess", "Version": "2025-05-01"},
                 {},
                 {},
             ),
@@ -99,8 +121,10 @@ class ObserveService(Service):
                     示例值: 3600
 
         """
+        if hasattr(params, "model_dump"):
+            params = params.model_dump()
         return observe_types.CreateApiTokenResponse.model_validate(
-            self.__request("CreateApiToken", params.model_dump())
+            self.__request("CreateApiToken", params)
         )
 
     def ListTraceSpans(
@@ -119,9 +143,49 @@ class ObserveService(Service):
             Dict:
 
         """
+        if hasattr(params, "model_dump"):
+            params = params.model_dump()
+        if isinstance(params, dict) and params.get("LastID", None) == "":
+            params.pop("LastID", None)
         return observe_types.ListTraceSpansResponse.model_validate(
             self.__request("ListTraceSpans", params)
         )
+
+    def TraceAIProcess(self, params, on_event=None):
+        if bool(params.get("IsStream")):
+            return self.__stream_request("TraceAIProcess", params, on_event=on_event)
+        return self.__request("TraceAIProcess", params)
+
+    def GetTraceAIProcessHistory(
+        self, params: observe_types.GetTraceAIProcessHistoryRequest
+    ) -> observe_types.GetTraceAIProcessHistoryResponse:
+        """获取 trace AI 分析历史
+
+        Args:
+            params (Dict):
+
+                `WorkspaceID (str)`: 必选, 工作空间 ID
+
+                `TraceID (str)`: 必选, trace ID
+
+                `PageSize (int)`: 可选, 单页数量
+
+        Returns:
+            Dict:
+
+                `Items (List[TraceSpanItem])`: trace span 列表
+
+        """
+        if hasattr(params, "model_dump"):
+            params = params.model_dump()
+        return observe_types.GetTraceAIProcessHistoryResponse.model_validate(
+            self.__request("GetTraceAIProcessHistory", params)
+        )
+
+    def AlertAIProcess(self, params, on_event=None):
+        if bool(params.get("IsStream")):
+            return self.__stream_request("AlertAIProcess", params, on_event=on_event)
+        return self.__request("AlertAIProcess", params)
 
     def __request(self, action, params):
         res = self.json(action, dict(), json.dumps(params))
@@ -131,3 +195,91 @@ class ObserveService(Service):
         if "Result" not in res_json.keys():
             return res_json
         return res_json["Result"]
+
+    def __stream_request(self, action, params, on_event=None):
+        """Send a streaming (SSE) request and aggregate it into the final
+        AIProcessResponse-shaped dict produced by the server-side `done` event.
+        Falls back to aggregating delta events if `done` is missing.
+        """
+        if action not in self.api_info:
+            raise Exception("no such api")
+        api_info = self.api_info[action]
+        body = json.dumps(params)
+        r = self.prepare_request(api_info, dict())
+        r.headers["Content-Type"] = "application/json"
+        r.headers["Accept"] = "text/event-stream"
+        r.body = body
+        SignerV4.sign(r, self.service_info.credentials)
+        url = r.build()
+        with self.session.post(
+            url,
+            headers=r.headers,
+            data=r.body,
+            stream=True,
+            timeout=(self.service_info.connection_timeout, self.service_info.socket_timeout),
+        ) as resp:
+            if resp.status_code != 200:
+                raise Exception(resp.text.encode("utf-8"))
+
+            final = None
+            content_parts = []
+            reasoning_parts = []
+            err_message = None
+            event = ""
+            data_buf = []
+
+            def handle_event(event_name, data_str):
+                nonlocal final, err_message
+                if not event_name and not data_str:
+                    return
+                payload = None
+                if data_str:
+                    try:
+                        payload = json.loads(data_str)
+                    except json.JSONDecodeError:
+                        payload = data_str
+                if on_event is not None:
+                    try:
+                        on_event(event_name, payload)
+                    except Exception:
+                        # 回调异常不应影响主流程
+                        pass
+                if event_name == "done":
+                    if isinstance(payload, dict):
+                        final = payload
+                elif event_name == "content":
+                    if isinstance(payload, dict) and payload.get("content"):
+                        content_parts.append(payload["content"])
+                elif event_name == "reasoning":
+                    if isinstance(payload, dict) and payload.get("reasoning_content"):
+                        reasoning_parts.append(payload["reasoning_content"])
+                elif event_name == "error":
+                    if isinstance(payload, dict):
+                        err_message = payload.get("err_message") or json.dumps(payload)
+
+            for raw_line in resp.iter_lines(decode_unicode=True):
+                if raw_line is None:
+                    continue
+                if raw_line == "":
+                    handle_event(event, "\n".join(data_buf))
+                    event = ""
+                    data_buf = []
+                    continue
+                if raw_line.startswith(":"):
+                    continue
+                if raw_line.startswith("event:"):
+                    event = raw_line[len("event:"):].strip()
+                elif raw_line.startswith("data:"):
+                    data_buf.append(raw_line[len("data:"):].lstrip())
+
+            if event or data_buf:
+                handle_event(event, "\n".join(data_buf))
+
+            if final is not None:
+                return final
+            if err_message is not None:
+                raise Exception(err_message)
+            return {
+                "content": "".join(content_parts),
+                "reasoning_content": "".join(reasoning_parts),
+            }
