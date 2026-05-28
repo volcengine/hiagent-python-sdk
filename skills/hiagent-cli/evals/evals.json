@@ -1,0 +1,20 @@
+{
+  "skill_name": "hiagent-cli",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "在这个仓库里我没安装 cli-anything-hiagent。请给出最稳妥的方式查看 CLI 版本与帮助。",
+      "expected_output": "给出 python -m 入口的非交互命令（--version / --help），并说明帮助输出包含 observe 子命令。"
+    },
+    {
+      "id": 1,
+      "prompt": "我需要用 observe 模块：先创建 API Token，然后列出最近的 trace spans（按 StartTime 倒序），并给出分页下一页的做法。请同时说明鉴权的前置条件与最常见报错的排查顺序。",
+      "expected_output": "给出 observe token create 与 observe trace list 的完整命令（含 sort/page-size/last-id），明确 last-id 可使用上一页最后一条 item 的 DocID；并说明 VOLC_ACCESSKEY/VOLC_SECRETKEY 或 ~/.volc/.env 的要求与排障步骤。"
+    },
+    {
+      "id": 2,
+      "prompt": "我有一个 trace 排查不顺，希望让 AI 自动分析它，并随后查询历史的 AI 分析结果。我也有一条告警规则需要让 AI 解读。请给出对应的 cli-anything-hiagent 命令、参数与默认 stream 行为说明。",
+      "expected_output": "给出 observe trace-ai-process / observe trace-ai-history / observe alert-ai-process 三条命令的完整示例（含 --workspace-id 与 --trace-id / --rule-id），说明默认 IsStream=True 与 --no-stream 选项；并提示鉴权前置条件。"
+    }
+  ]
+}

@@ -167,3 +167,5 @@ chainlit.md
 .vscode
 .idea
 license.py
+.DS_Store
+.trae/
