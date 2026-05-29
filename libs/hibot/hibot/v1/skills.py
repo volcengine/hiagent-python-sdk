@@ -9,6 +9,7 @@ from .._version import SERVER_VERSION
 from ._helpers import from_dict, list_from_items
 from .types import (
     V1Skill,
+    V1SkillCredentialInputParams,
     V1SkillDeleteParams,
     V1SkillGetParams,
     V1SkillListParams,
@@ -18,6 +19,37 @@ from .types import (
     V1SkillVersion,
     V1SkillVersionListParams,
 )
+
+
+def _credential_config_to_dict(cfg: V1SkillCredentialInputParams) -> dict:
+    body: dict = {}
+    if cfg.name:
+        body["Name"] = cfg.name
+    if cfg.description:
+        body["Description"] = cfg.description
+    if cfg.source:
+        body["Source"] = cfg.source
+    if cfg.provider_type:
+        body["ProviderType"] = cfg.provider_type
+    if cfg.config is not None:
+        body["Config"] = cfg.config
+    if cfg.secrets:
+        secrets_list = []
+        for s in cfg.secrets:
+            entry: dict = {}
+            if s.secret_id:
+                entry["SecretID"] = s.secret_id
+            if s.key_name:
+                entry["KeyName"] = s.key_name
+            if s.description:
+                entry["Description"] = s.description
+            if s.secret_type:
+                entry["SecretType"] = s.secret_type
+            if s.secret_value:
+                entry["SecretValue"] = s.secret_value
+            secrets_list.append(entry)
+        body["Secrets"] = secrets_list
+    return body
 
 
 class SkillsService:
@@ -44,6 +76,8 @@ class SkillsService:
             body["Enabled"] = params.enabled
         if params.slug_id:
             body["SlugID"] = params.slug_id
+        if params.credential_config is not None:
+            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         result = self._action("CreateSkill", body)
@@ -114,6 +148,8 @@ class SkillsService:
             body["NewVersion"] = params.new_version
         if params.slug_id is not None:
             body["SlugID"] = params.slug_id
+        if params.credential_config is not None:
+            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
         self._action("UpdateSkill", body)
 
     def delete(self, params: V1SkillDeleteParams) -> None:

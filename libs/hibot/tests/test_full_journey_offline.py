@@ -14,11 +14,12 @@ import httpx
 from hibot import (
     V1AgentNewParams,
     V1AgentNewParamsToolUnion,
-    V1CredentialRefParams,
+    V1CredentialSecretInputParams,
     V1ManagedAgentMCPToolParams,
     V1ManagedAgentModelConfigParams,
     V1ManagedAgentResourceRefParams,
     V1ManagedAgentSkillToolParams,
+    V1MCPCredentialInputParams,
     V1MCPNewParams,
     V1ModelGetParams,
     V1PromptNewParams,
@@ -182,7 +183,17 @@ def test_full_journey_streaming_and_batch(
             name="e2e-mcp",
             transport="streamable_http",
             endpoint="http://mcp.local/mcp",
-            credential=V1CredentialRefParams(name="e2e-token"),
+            credential_config=V1MCPCredentialInputParams(
+                name="e2e-token",
+                provider_type="basic",
+                secrets=[
+                    V1CredentialSecretInputParams(
+                        key_name="token",
+                        secret_type="string",
+                        secret_value="e2e-token-value",
+                    )
+                ],
+            ),
         )
     )
     assert mcp.id, "mcp.id empty"
