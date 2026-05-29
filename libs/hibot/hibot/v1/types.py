@@ -291,6 +291,7 @@ class V1MessageFile:
     name: Optional[str] = field(default=None, metadata={"json": "Name"})
     content_type: Optional[str] = field(default=None, metadata={"json": "ContentType"})
     url: Optional[str] = field(default=None, metadata={"json": "URL"})
+    blob_id: Optional[str] = field(default=None, metadata={"json": "BlobID"})
 
 
 @dataclass
@@ -546,8 +547,32 @@ class V1DirectoryGetByNameParams:
 
 
 @dataclass
-class V1CredentialRefParams:
+class V1CredentialSecretInputParams:
+    secret_id: str = ""
+    key_name: str = ""
+    description: str = ""
+    secret_type: str = ""
+    secret_value: str = ""
+
+
+@dataclass
+class V1MCPCredentialInputParams:
     name: str = ""
+    description: str = ""
+    source: str = ""
+    provider_type: str = ""
+    config: Optional[Any] = None
+    secrets: Optional[List[V1CredentialSecretInputParams]] = None
+
+
+@dataclass
+class V1SkillCredentialInputParams:
+    name: str = ""
+    description: str = ""
+    source: str = ""
+    provider_type: str = ""
+    config: Optional[Any] = None
+    secrets: Optional[List[V1CredentialSecretInputParams]] = None
 
 
 @dataclass
@@ -561,7 +586,7 @@ class V1MCPNewParams:
     command: str = ""
     args: Optional[List[str]] = None
     auth_type: str = ""
-    credential: Optional[V1CredentialRefParams] = None
+    credential_config: Optional[V1MCPCredentialInputParams] = None
     tool_allowlist: Optional[List[str]] = None
     tool_denylist: Optional[List[str]] = None
     tool_prefix: str = ""
@@ -597,6 +622,7 @@ class V1MCPUpdateParams:
     command: Optional[str] = None
     args: Optional[List[str]] = None
     auth_type: Optional[str] = None
+    credential_config: Optional[V1MCPCredentialInputParams] = None
     tool_allowlist: Optional[List[str]] = None
     tool_denylist: Optional[List[str]] = None
     tool_prefix: Optional[str] = None
@@ -621,7 +647,7 @@ class V1MCPTestConnectionParams:
     command: str = ""
     args: Optional[List[str]] = None
     auth_type: str = ""
-    credential: Optional[V1CredentialRefParams] = None
+    credential_config: Optional[V1MCPCredentialInputParams] = None
     timeout: int = 0
     workspace_id: str = ""
 
@@ -643,6 +669,7 @@ class V1SkillNewParams:
     enabled: Optional[bool] = None
     version: str = ""
     slug_id: str = ""
+    credential_config: Optional[V1SkillCredentialInputParams] = None
     workspace_id: str = ""
 
 
@@ -675,6 +702,7 @@ class V1SkillUpdateParams:
     enabled: Optional[bool] = None
     new_version: Optional[str] = None
     slug_id: Optional[str] = None
+    credential_config: Optional[V1SkillCredentialInputParams] = None
     workspace_id: str = ""
 
 
@@ -802,6 +830,7 @@ class V1SessionChatParams:
     input: str = ""
     agent_id: str = ""
     client_message_id: str = ""
+    files: Optional[List[V1MessageFile]] = None
     workspace_id: str = ""
 
 

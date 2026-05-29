@@ -219,7 +219,8 @@ class SessionsService:
     # Chat --------------------------------------------------------------
 
     def chat(self, session_id: str, params: V1SessionChatParams) -> V1Message:
-        with self.chat_streaming(session_id, params) as stream:
+        # 非流式 Chat 自动 set-all 审批，避免单回合中断在审批环节。
+        with self._chat_streaming(session_id, params, auto_approve_all=True) as stream:
             for event in stream:
                 if event.type == V1_SESSION_CHAT_EVENT_FAILED:
                     msg = event.error.message or event.error.code or "unknown error"
@@ -229,6 +230,14 @@ class SessionsService:
             return stream.final_message()
 
     def chat_streaming(self, session_id: str, params: V1SessionChatParams) -> V1SessionChatStream:
+        return self._chat_streaming(session_id, params, auto_approve_all=False)
+
+    def _chat_streaming(
+        self,
+        session_id: str,
+        params: V1SessionChatParams,
+        auto_approve_all: bool,
+    ) -> V1SessionChatStream:
         if not session_id:
             return V1SessionChatStream(error=ValueError("hibot: session id is required"))
         agent_id = params.agent_id
@@ -239,10 +248,28 @@ class SessionsService:
             "AgentID": agent_id,
             "Content": params.input,
         }
+        if params.files:
+            files_payload = []
+            for f in params.files:
+                entry: dict = {}
+                if f.file_id:
+                    entry["FileID"] = f.file_id
+                if f.name:
+                    entry["Name"] = f.name
+                if f.content_type:
+                    entry["ContentType"] = f.content_type
+                if f.url:
+                    entry["URL"] = f.url
+                if f.blob_id:
+                    entry["BlobID"] = f.blob_id
+                files_payload.append(entry)
+            body["Files"] = files_payload
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         if params.client_message_id:
             body["ClientMessageID"] = params.client_message_id
+        if auto_approve_all:
+            body["Approve"] = "all"
         try:
             resp = self._v1.requester.stream_action(
                 Action(

@@ -9,6 +9,7 @@ from .._version import SERVER_VERSION
 from ._helpers import from_dict, list_from_items
 from .types import (
     V1MCP,
+    V1MCPCredentialInputParams,
     V1MCPDeleteParams,
     V1MCPGetParams,
     V1MCPListParams,
@@ -18,6 +19,37 @@ from .types import (
     V1MCPTestConnectionResult,
     V1MCPUpdateParams,
 )
+
+
+def _credential_config_to_dict(cfg: V1MCPCredentialInputParams) -> dict:
+    body: dict = {}
+    if cfg.name:
+        body["Name"] = cfg.name
+    if cfg.description:
+        body["Description"] = cfg.description
+    if cfg.source:
+        body["Source"] = cfg.source
+    if cfg.provider_type:
+        body["ProviderType"] = cfg.provider_type
+    if cfg.config is not None:
+        body["Config"] = cfg.config
+    if cfg.secrets:
+        secrets_list = []
+        for s in cfg.secrets:
+            entry: dict = {}
+            if s.secret_id:
+                entry["SecretID"] = s.secret_id
+            if s.key_name:
+                entry["KeyName"] = s.key_name
+            if s.description:
+                entry["Description"] = s.description
+            if s.secret_type:
+                entry["SecretType"] = s.secret_type
+            if s.secret_value:
+                entry["SecretValue"] = s.secret_value
+            secrets_list.append(entry)
+        body["Secrets"] = secrets_list
+    return body
 
 
 class MCPsService:
@@ -48,8 +80,8 @@ class MCPsService:
             body["Args"] = list(params.args)
         if params.auth_type:
             body["AuthType"] = params.auth_type
-        if params.credential is not None:
-            body["Credential"] = {"Name": params.credential.name}
+        if params.credential_config is not None:
+            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
         if params.tool_allowlist is not None:
             body["ToolAllowlist"] = list(params.tool_allowlist)
         if params.tool_denylist is not None:
@@ -117,6 +149,8 @@ class MCPsService:
             body["Args"] = list(params.args)
         if params.auth_type is not None:
             body["AuthType"] = params.auth_type
+        if params.credential_config is not None:
+            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
         if params.tool_allowlist is not None:
             body["ToolAllowlist"] = list(params.tool_allowlist)
         if params.tool_denylist is not None:
@@ -155,8 +189,8 @@ class MCPsService:
             body["Args"] = list(params.args)
         if params.auth_type:
             body["AuthType"] = params.auth_type
-        if params.credential is not None:
-            body["Credential"] = {"Name": params.credential.name}
+        if params.credential_config is not None:
+            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
         if params.timeout:
             body["Timeout"] = params.timeout
         if params.workspace_id:
