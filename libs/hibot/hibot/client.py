@@ -21,8 +21,6 @@ class Client:
         self._requester = Requester(config)
         services = Services(
             server=config.server_service,
-            gateway=config.gateway_service,
-            model=config.model_service,
             up=config.up_service,
         )
         self.v1 = V1Client(self._requester, services)

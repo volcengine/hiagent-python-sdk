@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import List, Optional
 
 from .._request import Action
-from .._version import MODEL_VERSION
+from .._version import SERVER_VERSION
 from ._helpers import list_from_items
 from .types import (
     V1Model,
@@ -28,7 +28,12 @@ class ModelsService:
 
     def _action(self, name: str, body):
         return self._v1.requester.do_action(
-            Action(service=self._v1.services.model, version=MODEL_VERSION, action=name, body=body)
+            Action(
+                service=self._v1.services.server,
+                version=SERVER_VERSION,
+                action=name,
+                body=body,
+            )
         )
 
     def get(self, params: Optional[V1ModelGetParams] = None, **kwargs) -> V1Model:
@@ -38,7 +43,13 @@ class ModelsService:
         if params.id and not ids:
             ids = [params.id]
         if not ids:
-            if not (params.name or params.model_name or params.provider or params.type or params.spec):
+            if not (
+                params.name
+                or params.model_name
+                or params.provider
+                or params.type
+                or params.spec
+            ):
                 raise ValueError(
                     "hibot: model id is required (or provide Name/ModelName/Provider/Type/Spec)"
                 )
@@ -56,13 +67,25 @@ class ModelsService:
         return matched
 
     def _find_by_filter(self, params: V1ModelGetParams) -> V1Model:
-        listing = self.list(name=params.name, workspace_id=params.workspace_id)
-        if not listing.items:
-            raise ValueError("hibot: model not found")
-        matched = self._match(listing.items, params)
-        if matched is None:
-            raise ValueError("hibot: model not found matching filter")
-        return matched
+        page_num = 1
+        page_size = 100
+        while True:
+            listing = self.list(
+                name=params.name,
+                workspace_id=params.workspace_id,
+                page={"PageNum": page_num, "PageSize": page_size},
+            )
+            matched = self._match(listing.items, params)
+            if matched is not None:
+                return matched
+            if not listing.items:
+                break
+            if listing.total is not None and page_num * page_size >= listing.total:
+                break
+            if listing.total is None and len(listing.items) < page_size:
+                break
+            page_num += 1
+        raise ValueError("hibot: model not found matching filter")
 
     @staticmethod
     def _match(items: List[V1Model], params: V1ModelGetParams) -> Optional[V1Model]:
@@ -78,23 +101,41 @@ class ModelsService:
             if params.spec and m.spec != params.spec:
                 continue
             return m
-        if not (params.name or params.model_name or params.provider or params.type or params.spec):
+        if not (
+            params.name
+            or params.model_name
+            or params.provider
+            or params.type
+            or params.spec
+        ):
             return items[0]
         return None
 
-    def list(self, *, name: str = "", workspace_id: str = "", page=None, sort_by: str = "", sort_order: str = "") -> V1ModelList:
+    def list(
+        self,
+        *,
+        name: str = "",
+        workspace_id: str = "",
+        page=None,
+        sort_by: str = "",
+        sort_order: str = "",
+    ) -> V1ModelList:
         body = {}
         if workspace_id:
             body["WorkspaceID"] = workspace_id
         if page is not None:
-            body["Page"] = page if isinstance(page, dict) else {"PageNum": page.page_num, "PageSize": page.page_size}
+            body["Page"] = (
+                page
+                if isinstance(page, dict)
+                else {"PageNum": page.page_num, "PageSize": page.page_size}
+            )
         if sort_by:
             body["SortBy"] = sort_by
         if sort_order:
             body["SortOrder"] = sort_order
         if name:
             body["Filter"] = {"Name": name}
-        result = self._action("ListModel", body)
+        result = self._action("ListModels", body)
         ml = V1ModelList()
         if isinstance(result, dict):
             ml.items = list_from_items(V1Model, result)
@@ -176,17 +217,22 @@ class ModelsService:
         self._action("DeleteModel", body)
 
     def list_providers(self) -> List[str]:
-        result = self._action("ListProvider", {})
+        result = self._action("ListProviders", {})
         if isinstance(result, dict):
             return list(result.get("Providers") or [])
         return []
 
-    def list_model_providers(self, params: V1ModelProviderListParams) -> V1ModelProviderList:
+    def list_model_providers(
+        self, params: V1ModelProviderListParams
+    ) -> V1ModelProviderList:
         body = {}
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         if params.page is not None:
-            body["Page"] = {"PageNum": params.page.page_num, "PageSize": params.page.page_size}
+            body["Page"] = {
+                "PageNum": params.page.page_num,
+                "PageSize": params.page.page_size,
+            }
         if params.sort_by:
             body["SortBy"] = params.sort_by
         if params.sort_order:
@@ -202,23 +248,27 @@ class ModelsService:
             flt["Features"] = list(params.features)
         if flt:
             body["Filter"] = flt
-        result = self._action("ListModelProvider", body)
+        result = self._action("ListModelProviders", body)
         out = V1ModelProviderList()
         if isinstance(result, dict):
             out.items = list_from_items(V1ModelProvider, result, key="Models")
             out.total = result.get("Total")
         return out
 
-    def get_model_provider(self, params: V1ModelProviderGetParams) -> List[V1ModelProvider]:
+    def get_model_provider(
+        self, params: V1ModelProviderGetParams
+    ) -> List[V1ModelProvider]:
         if not params.ids:
             raise ValueError("hibot: provider IDs are required")
         body = {"IDs": list(params.ids)}
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
-        result = self._action("GetProvider", body)
+        result = self._action("GetModelProvider", body)
         return list_from_items(V1ModelProvider, result)
 
-    def get_model_provider_credential_schema(self, params: V1ModelProviderCredentialSchemaParams):
+    def get_model_provider_credential_schema(
+        self, params: V1ModelProviderCredentialSchemaParams
+    ):
         if not params.provider:
             raise ValueError("hibot: provider is required")
         if not params.type:

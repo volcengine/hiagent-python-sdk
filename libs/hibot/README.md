@@ -1,9 +1,9 @@
 # Hibot Python SDK
 
-Python client for the Hibot Managed Agent platform. Behaviorally aligned 1:1
-with the Go SDK in `hiagent-go-sdk/hibot` — same TOP routing, same VOLC v4
-signing, same SSE event normalization, same default-environment + peer
-injection semantics.
+Python client for the Hibot Managed Agent platform. The public API is aligned
+to `hibot_engine/api/idl/server.thrift`: every Hibot Action is signed for
+`hibot-server` at version `2026-04-23`; artifact uploads use the separate `up`
+service. The SDK also preserves VOLC v4 signing and SSE event normalization.
 
 > Distribution name: `hibot` (PyPI). Top-level import: `hibot`.
 >
@@ -38,7 +38,7 @@ cfg = hibot.Config(
 with hibot.Hibot(cfg) as client:
     # 1. Pick a base model (no Provider/Type filter ⇒ first match)
     model = client.v1.models.get(hibot.V1ModelGetParams(
-        model_name="doubao-seed-2.0-pro-260215",
+        model_name="doubao-seed-2-0-pro-260215",
     ))
 
     # 2. Create an agent (default Environment auto-selected)
@@ -83,39 +83,46 @@ Top-level (`hibot`):
 | `Config`                      | Endpoint + AK/SK + WorkspaceID + region/services overrides |
 | `APIError`                    | Raised on non-2xx or non-empty `ResponseMetadata.Error`    |
 | `V1*` types                   | All resource & param dataclasses (re-exported from `v1`)   |
-| `BASE_MODELS` / `BASE_MODEL_*`| Built-in aigw model catalog & constants                    |
+| `BASE_MODELS` / `BASE_MODEL_*`| Built-in model catalog & constants                         |
 
 Resource services live under `client.v1.*`:
 
 - `client.v1.uploads` — `upload_blob` (routes to `/up` subpath via `up` service)
-- `client.v1.environments` — `create / list / get / update / delete / default`
+- `client.v1.environments` — `create / list / get / update / delete / default / list_workspace_specs`
 - `client.v1.models` — `get / list / create / update / delete / list_providers / list_model_providers / get_model_provider / get_model_provider_credential_schema`
 - `client.v1.prompts` — `create / list / update / delete`
-- `client.v1.resources` — `create / list / update / delete / get_by_name / batch_get` (+ nested `client.v1.resources.directories`)
-- `client.v1.mcps` — `create / list / get / update / delete / test_connection / resolve`
-- `client.v1.skills` — `create / list / get / update / delete / list_versions / resolve_version`
-- `client.v1.agents` — `create / list / get / batch_get / update / delete`
-- `client.v1.sessions` — `create / list / get / get_by_key / archive / delete / list_messages / get_message / inject_message / chat / chat_streaming`
+- `client.v1.resources` — resource/directory CRUD plus `batch_create / batch_get / move`
+- `client.v1.mcps` — CRUD plus `batch_get / test_connection / resolve`
+- `client.v1.skills` — CRUD/version resolution plus parse, batch-get, and Ark Skill Hub operations
+- `client.v1.agents` — CRUD, batch-get, and `retry_create / stop / resume`
+- `client.v1.channels` — channel CRUD
+- `client.v1.sessions` — session/message CRUD, batch-get, timeline history, `chat / chat_streaming / chat_resume / approve / cancel_run`
+- `client.v1.runtime_api_keys` — runtime key create/list/reveal/update/delete
+- `client.v1.runs` — persisted Run list/detail read model
+- `client.v1.cron_jobs` — Cron CRUD, run history/sync, toggle, and run-now
+- `client.v1.observations` — Trace list, Span list, and Span detail
+- `client.v1.overview` — workspace overview aggregation
+- `client.v1.metrics` — overview, trend, TopK, and breakdown queries
+- `client.v1.memories` — MemoryStore and MemoryFile CRUD/search
 
 ## Routing & versioning
 
-| Domain         | Service (default)  | Version       |
-| -------------- | ------------------ | ------------- |
-| CRUD           | `hibot-server`     | `2026-04-23`  |
-| Streaming chat | `hibot-gateway`    | `2026-05-11`  |
-| Models         | `aigw`             | `2023-08-01`  |
-| Uploads        | `up` (under `/up`) | `2022-01-01`  |
+| Domain                         | Service (default)  | Version      |
+| ------------------------------ | ------------------ | ------------ |
+| Hibot API (CRUD/model/chat)    | `hibot-server`     | `2026-04-23` |
+| Uploads                        | `up` (under `/up`) | `2022-01-01` |
 
-All four service identifiers can be overridden on `Config` for private
-deployments (`server_service` / `gateway_service` / `model_service` /
-`up_service`).
+The active service identifiers can be overridden on `Config` for private
+deployments (`server_service` / `up_service`). The deprecated
+`gateway_service` and `model_service` inputs remain as compatibility aliases
+but all Hibot Actions are signed and routed with `server_service`.
 
 The SDK injects `WorkspaceID` only at the **top level** of each Action body
-(never inside `Payload`), exactly mirroring the Go SDK.
+(never inside `Payload`), matching the current server IDL.
 
 ## Stream events
 
-`V1SessionChatStream` normalizes the gateway’s several event-name dialects
+`V1SessionChatStream` normalizes the server’s several event-name dialects
 (message.chunk / message_delta / run_completed / message.failed / run_failed /
 tool_started / tool_completed / …) into the canonical three-state set:
 
@@ -142,7 +149,7 @@ Two helpers are available on the stream:
 Service methods reject empty required identifiers (e.g. `agent_id`, `session_id`)
 the same way the Go SDK does.
 
-## Field alignment with Go SDK
+## Field alignment with Hibot server
 
 The wire-format JSON schema is identical: response classes deserialize from
 PascalCase keys (e.g. `ID`, `WorkspaceID`, `CreatedAt`). Notable mappings that
@@ -163,9 +170,25 @@ Skill bindings use the **version ID** in the `Skills[].ID` slot — pass the
 pytest -q
 ```
 
-Tests are completely offline — they use `httpx.MockTransport` to inspect
+The normal suite is offline: it uses `httpx.MockTransport` to inspect
 URL/Action/Version/Authorization headers and request bodies, plus simulated
 SSE payloads to exercise the chat stream.
+
+Real create → runtime-ready → session → streaming Chat → synchronous Chat →
+cleanup tests are enabled when these variables are present:
+
+```bash
+export HIBOT_ENDPOINT="http://..."
+export HIBOT_AK="..."
+export HIBOT_SK="..."
+export HIBOT_WORKSPACE_ID="..."
+pytest -q libs/hibot/tests/test_real_env.py -s
+```
+
+`HIBOT_E2E_ENV_IMAGE_TYPE` and `HIBOT_E2E_MODEL_ID` can select a known-good
+runtime and model. The real test fails unless the Agent reaches
+`RuntimeStatus.Ready` and both Chat modes complete; created resources are
+removed in `finally` blocks.
 
 ## Differences from the Go SDK
 

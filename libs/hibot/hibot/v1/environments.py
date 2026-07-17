@@ -11,6 +11,7 @@ from .types import (
     V1Environment,
     V1EnvironmentNewParams,
     V1EnvironmentUpdateParams,
+    V1WorkspaceSpec,
 )
 
 
@@ -20,7 +21,12 @@ class EnvironmentsService:
 
     def _action(self, name: str, body):
         return self._v1.requester.do_action(
-            Action(service=self._v1.services.server, version=SERVER_VERSION, action=name, body=body)
+            Action(
+                service=self._v1.services.server,
+                version=SERVER_VERSION,
+                action=name,
+                body=body,
+            )
         )
 
     def create(self, **kwargs) -> V1Environment:
@@ -42,6 +48,8 @@ class EnvironmentsService:
             payload["PVCSize"] = params.pvc_size
         if params.data_path:
             payload["DataPath"] = params.data_path
+        if params.spec_code:
+            payload["SpecCode"] = params.spec_code
         body = {"Payload": payload}
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
@@ -92,6 +100,8 @@ class EnvironmentsService:
             payload["PVCSize"] = params.pvc_size
         if params.data_path is not None:
             payload["DataPath"] = params.data_path
+        if params.spec_code is not None:
+            payload["SpecCode"] = params.spec_code
         body = {"EnvID": params.env_id, "Payload": payload}
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
@@ -104,6 +114,12 @@ class EnvironmentsService:
         if workspace_id:
             body["WorkspaceID"] = workspace_id
         self._action("DeleteEnv", body)
+
+    def list_workspace_specs(self) -> List[V1WorkspaceSpec]:
+        result = self._action("ListWorkspaceSpecs", {})
+        if not isinstance(result, dict):
+            return []
+        return list_from_items(V1WorkspaceSpec, {"Items": result.get("Specs", [])})
 
     def default(self, *, workspace_id: str = "") -> V1Environment:
         items = self.list(workspace_id=workspace_id)

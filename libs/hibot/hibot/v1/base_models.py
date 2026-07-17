@@ -1,4 +1,4 @@
-"""aigw built-in base models (mirrors go/hibot/v1/base_models.go).
+"""Built-in base models exposed by the server model API.
 
 Generated from a real ListModelProvider call against the cluster.
 """

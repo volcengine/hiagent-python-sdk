@@ -9,6 +9,7 @@ from .._version import SERVER_VERSION
 from ._helpers import from_dict, list_from_items
 from .types import (
     V1MCP,
+    V1MCPBatchGetParams,
     V1MCPCredentialInputParams,
     V1MCPDeleteParams,
     V1MCPGetParams,
@@ -58,7 +59,12 @@ class MCPsService:
 
     def _action(self, name: str, body):
         return self._v1.requester.do_action(
-            Action(service=self._v1.services.server, version=SERVER_VERSION, action=name, body=body)
+            Action(
+                service=self._v1.services.server,
+                version=SERVER_VERSION,
+                action=name,
+                body=body,
+            )
         )
 
     def create(self, params: V1MCPNewParams) -> V1MCP:
@@ -81,7 +87,9 @@ class MCPsService:
         if params.auth_type:
             body["AuthType"] = params.auth_type
         if params.credential_config is not None:
-            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
+            body["CredentialConfig"] = _credential_config_to_dict(
+                params.credential_config
+            )
         if params.tool_allowlist is not None:
             body["ToolAllowlist"] = list(params.tool_allowlist)
         if params.tool_denylist is not None:
@@ -98,7 +106,12 @@ class MCPsService:
         new_id = result.get("ID") if isinstance(result, dict) else None
         if not new_id:
             raise ValueError("hibot: create mcp response missing ID")
-        return V1MCP(id=new_id, name=params.name, transport=params.transport, endpoint=params.endpoint)
+        return V1MCP(
+            id=new_id,
+            name=params.name,
+            transport=params.transport,
+            endpoint=params.endpoint,
+        )
 
     def list(self, params: V1MCPListParams = V1MCPListParams()) -> List[V1MCP]:
         body = {}
@@ -110,7 +123,21 @@ class MCPsService:
             body["Source"] = params.source
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
+        if params.page is not None:
+            body["Page"] = {
+                "PageNum": params.page.page_num,
+                "PageSize": params.page.page_size,
+            }
         result = self._action("ListMCPs", body)
+        return list_from_items(V1MCP, result)
+
+    def batch_get(self, params: V1MCPBatchGetParams) -> List[V1MCP]:
+        if not params.ids:
+            raise ValueError("hibot: mcp IDs are required")
+        body = {"IDs": list(params.ids)}
+        if params.workspace_id:
+            body["WorkspaceID"] = params.workspace_id
+        result = self._action("BatchGetMCPs", body)
         return list_from_items(V1MCP, result)
 
     def get(self, params: V1MCPGetParams) -> V1MCP:
@@ -150,7 +177,9 @@ class MCPsService:
         if params.auth_type is not None:
             body["AuthType"] = params.auth_type
         if params.credential_config is not None:
-            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
+            body["CredentialConfig"] = _credential_config_to_dict(
+                params.credential_config
+            )
         if params.tool_allowlist is not None:
             body["ToolAllowlist"] = list(params.tool_allowlist)
         if params.tool_denylist is not None:
@@ -173,7 +202,9 @@ class MCPsService:
             body["WorkspaceID"] = params.workspace_id
         self._action("DeleteMCP", body)
 
-    def test_connection(self, params: V1MCPTestConnectionParams) -> V1MCPTestConnectionResult:
+    def test_connection(
+        self, params: V1MCPTestConnectionParams
+    ) -> V1MCPTestConnectionResult:
         body = {}
         if params.transport:
             body["Transport"] = params.transport
@@ -190,20 +221,26 @@ class MCPsService:
         if params.auth_type:
             body["AuthType"] = params.auth_type
         if params.credential_config is not None:
-            body["CredentialConfig"] = _credential_config_to_dict(params.credential_config)
+            body["CredentialConfig"] = _credential_config_to_dict(
+                params.credential_config
+            )
         if params.timeout:
             body["Timeout"] = params.timeout
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         result = self._action("TestMCPConnection", body)
-        return from_dict(V1MCPTestConnectionResult, result) or V1MCPTestConnectionResult()
+        return (
+            from_dict(V1MCPTestConnectionResult, result) or V1MCPTestConnectionResult()
+        )
 
     def resolve(self, params: V1MCPResolveParams) -> V1MCP:
         if params.id:
             return V1MCP(id=params.id, name=params.name)
         if not params.name:
             raise ValueError("hibot: mcp id or name is required")
-        items = self.list(V1MCPListParams(keyword=params.name, workspace_id=params.workspace_id))
+        items = self.list(
+            V1MCPListParams(keyword=params.name, workspace_id=params.workspace_id)
+        )
         for item in items:
             if item.name == params.name and item.id:
                 return item

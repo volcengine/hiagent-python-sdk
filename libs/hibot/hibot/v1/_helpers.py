@@ -3,7 +3,17 @@
 from __future__ import annotations
 
 from dataclasses import fields, is_dataclass
-from typing import Any, Dict, List, Optional, Type, TypeVar
+from typing import (
+    Any,
+    Dict,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
 
 T = TypeVar("T")
 
@@ -18,6 +28,10 @@ def from_dict(cls: Type[T], data: Any) -> Optional[T]:
         return None
     if not is_dataclass(cls):
         raise TypeError(f"from_dict requires a dataclass; got {cls!r}")
+    try:
+        type_hints = get_type_hints(cls)
+    except (NameError, TypeError):
+        type_hints = {}
     init_kwargs: Dict[str, Any] = {}
     for fld in fields(cls):
         json_name = fld.metadata.get("json", fld.name) if fld.metadata else fld.name
@@ -25,7 +39,9 @@ def from_dict(cls: Type[T], data: Any) -> Optional[T]:
         for key in (json_name, fld.name):
             if key in data:
                 value = data[key]
-                init_kwargs[fld.name] = _decode_field(fld, value)
+                init_kwargs[fld.name] = _decode_field(
+                    type_hints.get(fld.name, fld.type), value
+                )
                 break
     try:
         return cls(**init_kwargs)  # type: ignore[call-arg]
@@ -35,40 +51,52 @@ def from_dict(cls: Type[T], data: Any) -> Optional[T]:
         # Build a "safe" version by providing defaults for missing required fields.
         instance = cls.__new__(cls)  # type: ignore[call-arg]
         for fld in fields(cls):
-            setattr(instance, fld.name, init_kwargs.get(fld.name, _default_for_field(fld)))
+            setattr(
+                instance, fld.name, init_kwargs.get(fld.name, _default_for_field(fld))
+            )
         return instance
 
 
-def _decode_field(fld, value: Any) -> Any:
+def _decode_field(field_type: Any, value: Any) -> Any:
     # Detect List[X] of dataclass and dict-of-X
-    inner = _list_of_dataclass(fld.type)
+    inner = _list_of_dataclass(field_type)
     if inner and isinstance(value, list):
         return [from_dict(inner, v) if isinstance(v, dict) else v for v in value]
-    nested = _dataclass_type(fld.type)
+    nested = _dataclass_type(field_type)
     if nested and isinstance(value, dict):
         return from_dict(nested, value)
     return value
 
 
 def _dataclass_type(tp: Any):
-    # str type-hints (PEP 563) won't resolve here; we rely on generic dict pass-through.
     if isinstance(tp, type) and is_dataclass(tp):
         return tp
+    for arg in get_args(tp):
+        if isinstance(arg, type) and is_dataclass(arg):
+            return arg
     return None
 
 
 def _list_of_dataclass(tp: Any):
     # Best-effort: handle typing.List[X]
-    origin = getattr(tp, "__origin__", None)
+    origin = get_origin(tp)
     if origin is list:
-        args = getattr(tp, "__args__", ())
+        args = get_args(tp)
         if args and isinstance(args[0], type) and is_dataclass(args[0]):
             return args[0]
+    for arg in get_args(tp):
+        origin = get_origin(arg)
+        if origin is list:
+            args = get_args(arg)
+            if args and isinstance(args[0], type) and is_dataclass(args[0]):
+                return args[0]
     return None
 
 
 def _default_for_field(fld) -> Any:
-    if fld.default is not None and fld.default is not getattr(fld, "_MISSING_TYPE", None):
+    if fld.default is not None and fld.default is not getattr(
+        fld, "_MISSING_TYPE", None
+    ):
         try:
             from dataclasses import MISSING
 

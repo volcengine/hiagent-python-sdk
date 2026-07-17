@@ -29,7 +29,9 @@ class Requester:
     def __init__(self, config: Config) -> None:
         self._cfg = config
         self._client: Optional[httpx.Client] = None
-        if config.http_client is not None and isinstance(config.http_client, httpx.Client):
+        if config.http_client is not None and isinstance(
+            config.http_client, httpx.Client
+        ):
             self._client = config.http_client
             self._owns_client = False
         else:
@@ -48,9 +50,20 @@ class Requester:
     # -------- public ops --------
 
     def do_action(self, action: Action) -> Optional[Any]:
+        return self._do_action(action)
+
+    def do_long_action(self, action: Action) -> Optional[Any]:
+        """Execute a non-streaming action without the client's total timeout."""
+        return self._do_action(action, timeout=None)
+
+    def _do_action(
+        self, action: Action, timeout: Any = httpx.USE_CLIENT_DEFAULT
+    ) -> Optional[Any]:
         body_bytes = self._marshal_body(action.body)
         url, headers = self._build_request(action, body_bytes, "application/json", None)
-        resp = self._client.request("POST", url, content=body_bytes, headers=headers)
+        resp = self._client.request(
+            "POST", url, content=body_bytes, headers=headers, timeout=timeout
+        )
         return decode_top(resp.status_code, resp.content)
 
     def do_raw_action(
@@ -60,7 +73,9 @@ class Requester:
         content_type: str,
         query: Optional[Mapping[str, str]] = None,
     ) -> Optional[Any]:
-        url, headers = self._build_request(action, body or b"", content_type or "application/octet-stream", query)
+        url, headers = self._build_request(
+            action, body or b"", content_type or "application/octet-stream", query
+        )
         resp = self._client.request("POST", url, content=body or b"", headers=headers)
         return decode_top(resp.status_code, resp.content)
 
@@ -69,7 +84,9 @@ class Requester:
         action.stream = True
         url, headers = self._build_request(action, body_bytes, "application/json", None)
         # SSE streams may run beyond the default timeout.
-        ctx = self._client.stream("POST", url, content=body_bytes, headers=headers, timeout=None)
+        ctx = self._client.stream(
+            "POST", url, content=body_bytes, headers=headers, timeout=None
+        )
         resp = ctx.__enter__()
         return _StreamResponse(ctx, resp)
 
@@ -88,7 +105,7 @@ class Requester:
         content_type: str,
         query: Optional[Mapping[str, str]],
     ):
-        # Compose URL: TOP gateway hosts the up service under /up
+        # Compose URL: TOP hosts the up service under /up
         # subpath; other services share the root path.
         parts = urlsplit(self._cfg.endpoint)
         path = parts.path or ""
@@ -98,6 +115,7 @@ class Requester:
         # Preserve any pre-existing query on the endpoint (rare).
         if parts.query:
             from urllib.parse import parse_qsl
+
             q.update(dict(parse_qsl(parts.query, keep_blank_values=True)))
         q["Action"] = action.action
         q["Version"] = action.version
@@ -168,7 +186,11 @@ def _default_encoder(o: Any) -> Any:
     if hasattr(o, "to_dict") and callable(o.to_dict):
         return o.to_dict()
     if hasattr(o, "__dict__"):
-        return {k: v for k, v in o.__dict__.items() if not k.startswith("_") and v is not None}
+        return {
+            k: v
+            for k, v in o.__dict__.items()
+            if not k.startswith("_") and v is not None
+        }
     raise TypeError(f"hibot: cannot encode object of type {type(o).__name__}")
 
 

@@ -20,7 +20,7 @@ from .types import (
     V1SessionTextDelta,
 )
 
-# Compat event names emitted by gateway legacy delivery + private Hermes runtime.
+# Compat event names emitted by legacy delivery + private Hermes runtime.
 _MESSAGE_CHUNK_COMPAT = "message.chunk"
 _MESSAGE_COMPLETED_COMPAT = "message.completed"
 _MESSAGE_FAILED_COMPAT = "message.failed"
@@ -66,7 +66,9 @@ def _first_key(payload: dict, *keys: str):
 
 
 def decode_chat_event(event_name: str, data: str) -> V1SessionChatEvent:
-    event = V1SessionChatEvent(type=normalize_chat_event_name(event_name), raw_data=data or "")
+    event = V1SessionChatEvent(
+        type=normalize_chat_event_name(event_name), raw_data=data or ""
+    )
     if not data:
         return event
     try:
@@ -102,7 +104,9 @@ def decode_chat_event(event_name: str, data: str) -> V1SessionChatEvent:
     if isinstance(err, dict):
         code = err.get("code") or err.get("Code") or ""
         message = err.get("message") or err.get("Message") or ""
-        event.error = V1SessionChatError(code=str(code or ""), message=str(message or ""))
+        event.error = V1SessionChatError(
+            code=str(code or ""), message=str(message or "")
+        )
     elif isinstance(err, str):
         event.error = V1SessionChatError(message=err)
 
@@ -117,6 +121,14 @@ def decode_chat_event(event_name: str, data: str) -> V1SessionChatEvent:
             event.message = msg
     elif isinstance(message_raw, str) and not event.error.message:
         event.error.message = message_raw
+
+    # hibot-server emits run_failed with the public failure reason in Content
+    # rather than Error/Message. Preserve that reason on the typed error so
+    # callers do not need to decode raw_data to diagnose a failed run.
+    if event.type == V1_SESSION_CHAT_EVENT_FAILED and not event.error.message:
+        content = _first_key(payload, "content", "Content")
+        if isinstance(content, str):
+            event.error.message = content
 
     if event.type == V1_SESSION_CHAT_EVENT_COMPLETED and event.message is None:
         msg = V1Message()

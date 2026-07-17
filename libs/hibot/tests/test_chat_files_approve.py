@@ -17,30 +17,24 @@ from hibot import (
 def test_chat_non_streaming_injects_approve_all(
     client_factory, make_handler, ok_envelope, sse
 ):
-    sse_body = (
-        b'event: run_completed\n'
-        b'data: {"message":{"ID":"m-1","Role":"assistant","Content":"ok"}}\n\n'
-    )
-    handler = make_handler([sse(sse_body)])
+    handler = make_handler([ok_envelope({"Message": "ok"})])
     client = client_factory(handler)
 
     msg = client.v1.sessions.chat(
         "s-1",
         V1SessionChatParams(input="hello", agent_id="agent-1"),
     )
-    assert msg.id == "m-1"
+    assert msg.content == "ok"
 
     body = json.loads(handler.calls[0].content)
     assert body["Approve"] == "all"
+    assert body["Stream"] is False
 
 
 def test_chat_streaming_does_not_inject_approve(
     client_factory, make_handler, ok_envelope, sse
 ):
-    sse_body = (
-        b'event: run_completed\n'
-        b'data: {"message":{"ID":"m-1"}}\n\n'
-    )
+    sse_body = b'event: run_completed\ndata: {"message":{"ID":"m-1"}}\n\n'
     handler = make_handler([sse(sse_body)])
     client = client_factory(handler)
 
@@ -52,19 +46,25 @@ def test_chat_streaming_does_not_inject_approve(
 
     body = json.loads(handler.calls[0].content)
     assert "Approve" not in body
+    assert body["Stream"] is True
 
 
 def test_chat_supports_files_and_empty_content(
     client_factory, make_handler, ok_envelope, sse
 ):
-    sse_body = (
-        b'event: run_completed\n'
-        b'data: {"message":{"ID":"m-1"}}\n\n'
+    handler = make_handler(
+        [
+            ok_envelope(
+                {
+                    "Message": "ok",
+                    "Files": [{"Name": "out.txt", "ContentType": "text/plain"}],
+                }
+            )
+        ]
     )
-    handler = make_handler([sse(sse_body)])
     client = client_factory(handler)
 
-    client.v1.sessions.chat(
+    msg = client.v1.sessions.chat(
         "s-1",
         V1SessionChatParams(
             agent_id="agent-1",
@@ -86,6 +86,8 @@ def test_chat_supports_files_and_empty_content(
     assert files[0]["Name"] == "report.pdf"
     assert files[0]["ContentType"] == "application/pdf"
     assert files[0]["BlobID"] == "blob-123"
+    assert msg.content == "ok"
+    assert msg.files and msg.files[0].name == "out.txt"
 
 
 def test_create_mcp_serializes_credential_config_secret_value(
@@ -126,9 +128,7 @@ def test_create_mcp_serializes_credential_config_secret_value(
     assert "Credential" not in body
 
 
-def test_update_mcp_passes_credential_config(
-    client_factory, make_handler, ok_envelope
-):
+def test_update_mcp_passes_credential_config(client_factory, make_handler, ok_envelope):
     handler = make_handler([ok_envelope({})])
     client = client_factory(handler)
 

@@ -11,12 +11,12 @@ import os
 import time
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import hibot
 import pytest
 from hibot import (
     V1AgentDeleteParams,
-    V1AgentListParams,
     V1AgentNewParams,
     V1AgentNewParamsToolUnion,
     V1ManagedAgentModelConfigParams,
@@ -26,19 +26,32 @@ from hibot import (
     V1ModelGetParams,
     V1ResourceDeleteParams,
     V1ResourceNewParams,
+    V1RunListParams,
     V1SessionChatParams,
+    V1SessionDeleteParams,
     V1SessionNewParams,
     V1SkillDeleteParams,
     V1SkillNewParams,
     V1UploadBlobParams,
 )
 
-_V1_MANAGED_AGENT_MODEL_DOUBAO_SEED_PRO = "doubao-seed-2.0-pro-260215"
+_V1_MANAGED_AGENT_MODEL_DOUBAO_SEED_PRO = "doubao-seed-2-0-pro-260215"
 _E2E_SKILL_PULSE_TOKEN = "PULSE_OK_E2E"
 
 _TESTDATA_DIR = Path(__file__).resolve().parents[1] / "testdata"
 _E2E_RESOURCE_FIXTURE = _TESTDATA_DIR / "runbook.md"
 _E2E_SKILL_FIXTURE_DIR = _TESTDATA_DIR / "skill"
+
+
+def _create_e2e_environment(client: hibot.Client) -> hibot.V1Environment:
+    image_type = _trim_env("HIBOT_E2E_ENV_IMAGE_TYPE") or "hermes"
+    env = client.v1.environments.create(
+        name=f"python-sdk-e2e-env-{time.time_ns()}",
+        description="Temporary environment created by the Python SDK E2E test.",
+        image_type=image_type,
+    )
+    print(f"created environment: id={env.id} image_type={env.image_type}")
+    return env
 
 
 def _trim_env(key: str) -> str:
@@ -48,7 +61,7 @@ def _trim_env(key: str) -> str:
 
 
 def _require_real_env_or_skip() -> str:
-    host = _trim_env("HIBOT_E2E_TOP_HOST")
+    host = _trim_env("HIBOT_E2E_TOP_HOST") or _trim_env("HIBOT_ENDPOINT")
     if not host:
         pytest.skip(
             "real-env tests require HIBOT_E2E_TOP_HOST; skipping in offline-only run"
@@ -57,9 +70,9 @@ def _require_real_env_or_skip() -> str:
 
 
 def _require_credentials() -> tuple[str, str, str]:
-    ak = _trim_env("HIBOT_E2E_AK")
-    sk = _trim_env("HIBOT_E2E_SK")
-    workspace = _trim_env("HIBOT_E2E_WORKSPACE")
+    ak = _trim_env("HIBOT_E2E_AK") or _trim_env("HIBOT_AK")
+    sk = _trim_env("HIBOT_E2E_SK") or _trim_env("HIBOT_SK")
+    workspace = _trim_env("HIBOT_E2E_WORKSPACE") or _trim_env("HIBOT_WORKSPACE_ID")
     if not ak or not sk or not workspace:
         pytest.fail(
             "real-env tests require HIBOT_E2E_AK / HIBOT_E2E_SK / HIBOT_E2E_WORKSPACE"
@@ -79,6 +92,67 @@ def _new_real_client() -> tuple[hibot.Client, str, str]:
         timeout=120.0,
     )
     return hibot.Hibot(cfg), host, workspace
+
+
+def _wait_agent_ready(
+    client: hibot.Client, agent_id: str, timeout_seconds: float = 600.0
+) -> hibot.V1Agent:
+    deadline = time.monotonic() + timeout_seconds
+    last_status = "missing"
+    previous_status = ""
+    while time.monotonic() < deadline:
+        agent = client.v1.agents.get(hibot.V1AgentGetParams(agent_id=agent_id))
+        status = agent.runtime_status
+        if status is not None:
+            last_status = (
+                f"status={status.status} ready={status.ready} "
+                f"reason={status.reason} message={status.message}"
+            )
+            if last_status != previous_status:
+                print(f"agent status: id={agent_id} {last_status}")
+                previous_status = last_status
+            if status.ready:
+                print(f"agent ready: id={agent_id} {last_status}")
+                return agent
+        time.sleep(5)
+    pytest.fail(f"agent {agent_id} did not become ready: {last_status}")
+
+
+def test_wait_agent_ready_tolerates_transient_runtime_error(monkeypatch):
+    """Match hibot_engine's waiter: controller errors may recover before timeout."""
+    agents = iter(
+        [
+            hibot.V1Agent(
+                id="agent-1",
+                runtime_status=hibot.V1AgentRuntimeStatus(
+                    status="error",
+                    ready=False,
+                    reason="Unschedulable",
+                    message="waiting for PVC",
+                ),
+            ),
+            hibot.V1Agent(
+                id="agent-1",
+                runtime_status=hibot.V1AgentRuntimeStatus(
+                    status="ready",
+                    ready=True,
+                ),
+            ),
+        ]
+    )
+    client = SimpleNamespace(
+        v1=SimpleNamespace(
+            agents=SimpleNamespace(get=lambda _params: next(agents)),
+        )
+    )
+    monotonic_values = iter([0.0, 1.0, 2.0])
+    monkeypatch.setattr(time, "monotonic", lambda: next(monotonic_values))
+    monkeypatch.setattr(time, "sleep", lambda _seconds: None)
+
+    result = _wait_agent_ready(client, "agent-1", timeout_seconds=10.0)
+
+    assert result.runtime_status is not None
+    assert result.runtime_status.ready is True
 
 
 def _run_streaming_and_collect_events(
@@ -105,65 +179,126 @@ def _run_streaming_and_collect_events(
                     f"streaming chat failed: {event.error.message} (events={event_names})"
                 )
         if stream.err is not None:
-            pytest.fail(
-                f"streaming chat err: {stream.err} (events={event_names})"
-            )
+            pytest.fail(f"streaming chat err: {stream.err} (events={event_names})")
         if not saw_completed:
             pytest.fail(
                 f"streaming chat: no completed event observed (events={event_names})"
             )
         if not saw_delta:
-            print(
-                f"streaming chat: no delta event (short reply); events={event_names}"
-            )
+            print(f"streaming chat: no delta event (short reply); events={event_names}")
         final_msg = stream.final_message()
     return final_msg, event_names
 
 
+def test_real_env_server_read_smoke():
+    """Verify read-only actions are registered on hibot-server in the target deployment."""
+    client, _host, _workspace = _new_real_client()
+    try:
+        checks = {
+            "environments": client.v1.environments.list(),
+            "workspace_specs": client.v1.environments.list_workspace_specs(),
+            "models": client.v1.models.list().items,
+            "model_providers": client.v1.models.list_providers(),
+            "agents": client.v1.agents.list(),
+            "channels": client.v1.channels.list(),
+            "sessions": client.v1.sessions.list().items,
+            "cron_jobs": client.v1.cron_jobs.list().items,
+            "skills": client.v1.skills.list(),
+            "mcps": client.v1.mcps.list(),
+            "resources": client.v1.resources.list().items,
+            "directories": client.v1.resources.directories.list().items,
+            "memory_stores": client.v1.memories.list_stores().items,
+        }
+        overview = client.v1.overview.get()
+        if not checks["workspace_specs"]:
+            pytest.fail("real-env server smoke: workspace spec catalog is empty")
+        if overview.summary is None:
+            pytest.fail("real-env server smoke: overview response missing Summary")
+        print(
+            "server read smoke: "
+            + ", ".join(f"{name}={len(items)}" for name, items in checks.items())
+        )
+    finally:
+        client.close()
+
+
 def test_real_env_journey():
-    """Mirrors Go runRealEnvJourney — discover agent, chat streaming + batch."""
+    """Create an agent and verify server-backed streaming + synchronous Chat."""
     client, _host, workspace = _new_real_client()
-
-    # Step 1: discover an existing agent.
-    agents = client.v1.agents.list(V1AgentListParams())
-    if not agents:
-        pytest.fail(
-            f"real-env workspace {workspace!r} has no agents; please pre-create one before running this test"
+    cleanup_records: list[tuple[str, callable]] = []
+    try:
+        model = _resolve_real_env_model(client)
+        environment = _create_e2e_environment(client)
+        cleanup_records.append(
+            (
+                f"environment {environment.id}",
+                lambda: client.v1.environments.delete(env_id=environment.id),
+            )
         )
-    agent = agents[0]
-    print(f"using agent: id={agent.id} name={agent.name}")
-
-    # Step 2: create a session with no Peer — webchat default path.
-    session = client.v1.sessions.create(V1SessionNewParams(agent_id=agent.id))
-    if not session.id:
-        pytest.fail(f"real-env CreateSession returned empty ID: {session!r}")
-    print(f"created session: {session.id}")
-
-    # Step 3: streaming chat — must observe completed.
-    streaming_final, streaming_events = _run_streaming_and_collect_events(
-        client,
-        session.id,
-        agent.id,
-        "流式真实环境冒烟：请用一句话介绍你自己。",
-    )
-    if not streaming_final.id or not streaming_final.content:
-        pytest.fail(
-            f"real-env streaming final message incomplete: {streaming_final!r}"
+        agent = client.v1.agents.create(
+            V1AgentNewParams(
+                name=f"python-sdk-e2e-{time.time_ns()}",
+                model=V1ManagedAgentModelConfigParams(id=model.id),
+                system="You are a concise end-to-end test assistant.",
+                env_id=environment.id,
+            )
         )
-    print(
-        f"streaming final: id={streaming_final.id} content={streaming_final.content!r} events={streaming_events}"
-    )
+        cleanup_records.append(
+            (
+                f"agent {agent.id}",
+                lambda: client.v1.agents.delete(V1AgentDeleteParams(agent_id=agent.id)),
+            )
+        )
+        _wait_agent_ready(client, agent.id)
 
-    # Step 4: batch (non-streaming) chat reuses the same session.
-    batch_final = client.v1.sessions.chat(
-        session.id,
-        V1SessionChatParams(
-            agent_id=agent.id, input="批量真实环境冒烟：再回答一次同样的问题。"
-        ),
-    )
-    if not batch_final.id or not batch_final.content:
-        pytest.fail(f"real-env batch final message incomplete: {batch_final!r}")
-    print(f"batch final: id={batch_final.id} content={batch_final.content!r}")
+        session = client.v1.sessions.create(V1SessionNewParams(agent_id=agent.id))
+        cleanup_records.append(
+            (
+                f"session {session.id}",
+                lambda: client.v1.sessions.delete(
+                    V1SessionDeleteParams(session_id=session.id)
+                ),
+            )
+        )
+        print(f"created agent={agent.id} session={session.id} workspace={workspace}")
+
+        streaming_final, streaming_events = _run_streaming_and_collect_events(
+            client,
+            session.id,
+            agent.id,
+            "流式真实环境冒烟：请只回答 STREAM_OK。",
+        )
+        if not streaming_final.content:
+            pytest.fail(
+                f"real-env streaming final message incomplete: {streaming_final!r}"
+            )
+        print(
+            f"streaming final: content={streaming_final.content!r} events={streaming_events}"
+        )
+
+        batch_final = client.v1.sessions.chat(
+            session.id,
+            V1SessionChatParams(
+                agent_id=agent.id, input="非流式真实环境冒烟：请只回答 SYNC_OK。"
+            ),
+        )
+        if not batch_final.content:
+            pytest.fail(f"real-env sync final message incomplete: {batch_final!r}")
+        print(f"sync final: content={batch_final.content!r}")
+
+        runs = client.v1.runs.list(
+            V1RunListParams(agent_id=agent.id, session_id=session.id)
+        )
+        if not runs:
+            pytest.fail("real-env run read model is empty after completed Chat calls")
+        print(f"run read model: count={len(runs)} latest={runs[0].id}")
+    finally:
+        for label, cleanup in reversed(cleanup_records):
+            try:
+                cleanup()
+            except Exception as exc:  # noqa: BLE001
+                print(f"cleanup {label}: {exc}")
+        client.close()
 
 
 def _build_skill_zip_from_dir(src_dir: Path, out_path: Path) -> Path:
@@ -218,29 +353,6 @@ def _resolve_real_env_model(client: hibot.Client) -> V1Model:
 def test_real_env_resource_skill_loop(tmp_path):
     """Mirrors Go TestRealEnvResourceSkillLoop — full closed loop with cleanup."""
     client, _host, _workspace = _new_real_client()
-
-    # Step 1: pick a usable model.
-    model = _resolve_real_env_model(client)
-
-    # Step 2: upload Resource fixture.
-    resource_filename = _E2E_RESOURCE_FIXTURE.name
-    with open(_E2E_RESOURCE_FIXTURE, "rb") as f:
-        runbook_bytes = f.read()
-    resource_blob = client.v1.uploads.upload_blob(
-        V1UploadBlobParams(filename=resource_filename, content_type="text/markdown"),
-        runbook_bytes,
-    )
-    if not resource_blob.blob_id:
-        pytest.fail(f"upload {resource_filename}: empty BlobID")
-    resource = client.v1.resources.create(
-        V1ResourceNewParams(
-            name=f"e2e-runbook-{time.time_ns()}",
-            type="document_collection",
-            blob_id=resource_blob.blob_id,
-        )
-    )
-    print(f"created resource: id={resource.id} name={resource.name}")
-
     keep_agent = bool(_trim_env("HIBOT_E2E_KEEP_AGENT"))
     cleanup_records: list[tuple[str, callable]] = []
 
@@ -254,6 +366,38 @@ def test_real_env_resource_skill_loop(tmp_path):
                 print(f"cleanup {label}: {exc}")
 
     try:
+        # Step 1: pick a usable model.
+        model = _resolve_real_env_model(client)
+
+        environment = _create_e2e_environment(client)
+        cleanup_records.append(
+            (
+                f"environment {environment.id}",
+                lambda: client.v1.environments.delete(env_id=environment.id),
+            )
+        )
+
+        # Step 2: upload Resource fixture.
+        resource_filename = _E2E_RESOURCE_FIXTURE.name
+        with open(_E2E_RESOURCE_FIXTURE, "rb") as f:
+            runbook_bytes = f.read()
+        resource_blob = client.v1.uploads.upload_blob(
+            V1UploadBlobParams(
+                filename=resource_filename,
+                content_type="text/markdown",
+            ),
+            runbook_bytes,
+        )
+        if not resource_blob.blob_id:
+            pytest.fail(f"upload {resource_filename}: empty BlobID")
+        resource = client.v1.resources.create(
+            V1ResourceNewParams(
+                name=f"e2e-runbook-{time.time_ns()}",
+                type="document_collection",
+                blob_id=resource_blob.blob_id,
+            )
+        )
+        print(f"created resource: id={resource.id} name={resource.name}")
         cleanup_records.append(
             (
                 f"resource {resource.id}",
@@ -315,6 +459,7 @@ def test_real_env_resource_skill_loop(tmp_path):
                     )
                 ],
                 resources=[V1ManagedAgentResourceRefParams(id=resource.id)],
+                env_id=environment.id,
             )
         )
         if not agent.id:
@@ -323,17 +468,24 @@ def test_real_env_resource_skill_loop(tmp_path):
         cleanup_records.append(
             (
                 f"agent {agent.id}",
-                lambda: client.v1.agents.delete(
-                    V1AgentDeleteParams(agent_id=agent.id)
-                ),
+                lambda: client.v1.agents.delete(V1AgentDeleteParams(agent_id=agent.id)),
             )
         )
+        _wait_agent_ready(client, agent.id)
 
         # Step 5: create session.
         session = client.v1.sessions.create(V1SessionNewParams(agent_id=agent.id))
         if not session.id:
             pytest.fail("create session: empty ID")
         print(f"created session: {session.id}")
+        cleanup_records.append(
+            (
+                f"session {session.id}",
+                lambda: client.v1.sessions.delete(
+                    V1SessionDeleteParams(session_id=session.id)
+                ),
+            )
+        )
 
         # Step 6: skill closed loop — trigger pulse check, must observe tool events.
         skill_final, skill_events = _run_streaming_and_collect_events(
@@ -342,9 +494,7 @@ def test_real_env_resource_skill_loop(tmp_path):
             agent.id,
             "请执行一次 pulse check（按照 e2e-runbook-skill 的契约调用工具），并把工具返回的 token 原样告诉我。",
         )
-        print(
-            f"skill loop events={skill_events} final={skill_final.content!r}"
-        )
+        print(f"skill loop events={skill_events} final={skill_final.content!r}")
         content = skill_final.content or ""
         if _E2E_SKILL_PULSE_TOKEN not in content:
             pytest.fail(
@@ -352,9 +502,7 @@ def test_real_env_resource_skill_loop(tmp_path):
                 f"system prompt no longer leaks the token, so this proves the skill was NOT invoked. "
                 f"got={content!r}"
             )
-        if not any(
-            ev in ("tool_start", "tool_complete") for ev in skill_events
-        ):
+        if not any(ev in ("tool_start", "tool_complete") for ev in skill_events):
             pytest.fail(
                 "skill loop: no tool_start/tool_complete event observed on SSE stream; "
                 "the model likely answered without actually invoking e2e-runbook-skill. "
@@ -365,3 +513,4 @@ def test_real_env_resource_skill_loop(tmp_path):
         )
     finally:
         _cleanup()
+        client.close()

@@ -96,6 +96,21 @@ def test_decode_chat_event_extracts_failed_error():
     assert event.error.message == "explode"
 
 
+def test_decode_chat_event_extracts_server_failed_content():
+    data = json.dumps(
+        {
+            "content": "runtime provider error",
+            "request_id": "request-1",
+            "run_id": "run-1",
+            "status": "failed",
+        }
+    )
+    event = decode_chat_event("run_failed", data)
+    assert event.type == V1_SESSION_CHAT_EVENT_FAILED
+    assert event.request_id == "request-1"
+    assert event.error.message == "runtime provider error"
+
+
 def test_decode_chat_event_falls_back_to_top_level_message_id():
     data = json.dumps({"message_id": "m-2", "content": "fallback"})
     event = decode_chat_event("completed", data)

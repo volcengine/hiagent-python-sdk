@@ -3,16 +3,18 @@
 DEFAULT_REGION = "cn-north-1"
 
 SERVER_SERVICE = "hibot-server"
-GATEWAY_SERVICE = "hibot-gateway"
-# AIGW DestService: the TOP gateway registers model/provider
-# Actions under this exact service name; "aigw-server" returns InvalidAction.
-AIGW_SERVICE = "aigw"
 UP_SERVICE = "up"
+
+# Backward-compatible aliases. Hibot Actions no longer route to separate
+# gateway/model services; callers importing the old constants receive the
+# effective server values.
+GATEWAY_SERVICE = SERVER_SERVICE
+AIGW_SERVICE = SERVER_SERVICE
 
 V1 = "v1"
 
 # TOP-registered API Versions (YYYY-MM-DD).
 SERVER_VERSION = "2026-04-23"
-CHAT_VERSION = "2026-05-11"
-MODEL_VERSION = "2023-08-01"
 UP_VERSION = "2022-01-01"
+CHAT_VERSION = SERVER_VERSION
+MODEL_VERSION = SERVER_VERSION

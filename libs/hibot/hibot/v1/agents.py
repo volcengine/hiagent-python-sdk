@@ -14,6 +14,9 @@ from .types import (
     V1AgentGetParams,
     V1AgentListParams,
     V1AgentNewParams,
+    V1AgentResumeParams,
+    V1AgentRetryCreateParams,
+    V1AgentStopParams,
     V1AgentUpdateParams,
 )
 
@@ -43,9 +46,20 @@ def _build_tool_bindings(tools):
         return skills, mcps
     for t in tools:
         if t.of_skill is not None and t.of_skill.skill_version_id:
-            skills.append({"ID": t.of_skill.skill_version_id})
+            binding = {"ID": t.of_skill.skill_version_id}
+            if t.of_skill.enabled is not None:
+                binding["Enabled"] = t.of_skill.enabled
+            skills.append(binding)
         if t.of_mcp is not None and t.of_mcp.id:
-            mcps.append({"ID": t.of_mcp.id, "Enabled": True})
+            binding = {
+                "ID": t.of_mcp.id,
+                "Enabled": True if t.of_mcp.enabled is None else t.of_mcp.enabled,
+            }
+            if t.of_mcp.tool_allowlist is not None:
+                binding["ToolAllowlist"] = list(t.of_mcp.tool_allowlist)
+            if t.of_mcp.tool_denylist is not None:
+                binding["ToolDenylist"] = list(t.of_mcp.tool_denylist)
+            mcps.append(binding)
     return skills, mcps
 
 
@@ -55,7 +69,12 @@ class AgentsService:
 
     def _action(self, name: str, body):
         return self._v1.requester.do_action(
-            Action(service=self._v1.services.server, version=SERVER_VERSION, action=name, body=body)
+            Action(
+                service=self._v1.services.server,
+                version=SERVER_VERSION,
+                action=name,
+                body=body,
+            )
         )
 
     def create(self, params: Optional[V1AgentNewParams] = None, **kwargs) -> V1Agent:
@@ -74,6 +93,18 @@ class AgentsService:
             body["WorkspaceID"] = params.workspace_id
         if params.system is not None:
             body["SystemPrompt"] = params.system
+        for key, value in (
+            ("Description", params.description),
+            ("Channels", params.channels),
+            ("Config", params.config),
+            ("Metadata", params.metadata),
+            ("Icon", params.icon),
+            ("ApiProtocolType", params.api_protocol_type),
+            ("ModelInteractiveMode", params.model_interactive_mode),
+            ("EgressCredentials", params.egress_credentials),
+        ):
+            if value is not None:
+                body[key] = value
         resources = _build_resource_input(params.resources)
         if resources:
             body["Resources"] = resources
@@ -139,18 +170,40 @@ class AgentsService:
             for t in params.skills:
                 if not t.skill_version_id:
                     continue
-                skills_list.append({"ID": t.skill_version_id})
+                binding = {"ID": t.skill_version_id}
+                if t.enabled is not None:
+                    binding["Enabled"] = t.enabled
+                skills_list.append(binding)
             body["Skills"] = skills_list
         if params.mcps is not None:
             mcps_list = []
             for t in params.mcps:
                 if not t.id:
                     continue
-                mcps_list.append({"ID": t.id, "Enabled": True})
+                binding = {
+                    "ID": t.id,
+                    "Enabled": True if t.enabled is None else t.enabled,
+                }
+                if t.tool_allowlist is not None:
+                    binding["ToolAllowlist"] = list(t.tool_allowlist)
+                if t.tool_denylist is not None:
+                    binding["ToolDenylist"] = list(t.tool_denylist)
+                mcps_list.append(binding)
             body["MCPs"] = mcps_list
         if params.reset_resources or params.resources:
             resources = _build_resource_input(params.resources)
             body["Resources"] = resources or {}
+        for key, value in (
+            ("Config", params.config),
+            ("Metadata", params.metadata),
+            ("MemoryStores", params.memory_stores),
+            ("Icon", params.icon),
+            ("ApiProtocolType", params.api_protocol_type),
+            ("ModelInteractiveMode", params.model_interactive_mode),
+            ("EgressCredentials", params.egress_credentials),
+        ):
+            if value is not None:
+                body[key] = value
         self._action("UpdateAgent", body)
 
     def delete(self, params: V1AgentDeleteParams) -> None:
@@ -160,3 +213,20 @@ class AgentsService:
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         self._action("DeleteAgent", body)
+
+    def retry_create(self, params: V1AgentRetryCreateParams) -> None:
+        self._agent_action("RetryCreateAgent", params.agent_id, params.workspace_id)
+
+    def stop(self, params: V1AgentStopParams) -> None:
+        self._agent_action("StopAgent", params.agent_id, params.workspace_id)
+
+    def resume(self, params: V1AgentResumeParams) -> None:
+        self._agent_action("ResumeAgent", params.agent_id, params.workspace_id)
+
+    def _agent_action(self, action: str, agent_id: str, workspace_id: str) -> None:
+        if not agent_id:
+            raise ValueError("hibot: agent id is required")
+        body = {"AgentID": agent_id}
+        if workspace_id:
+            body["WorkspaceID"] = workspace_id
+        self._action(action, body)

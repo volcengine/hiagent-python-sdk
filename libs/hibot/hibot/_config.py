@@ -16,9 +16,10 @@ class Config:
     workspace_id: str
     region: str = _v.DEFAULT_REGION
     server_service: str = _v.SERVER_SERVICE
-    gateway_service: str = _v.GATEWAY_SERVICE
-    model_service: str = _v.AIGW_SERVICE
     up_service: str = _v.UP_SERVICE
+    # Deprecated compatibility inputs. All Hibot Actions use server_service.
+    gateway_service: str = ""
+    model_service: str = ""
     timeout: float = 30.0
     # Optional pre-built httpx.Client / httpx.AsyncClient — leave None to let
     # SDK build defaults internally.
@@ -32,9 +33,9 @@ class Config:
         self.workspace_id = (self.workspace_id or "").strip()
         self.region = (self.region or "").strip() or _v.DEFAULT_REGION
         self.server_service = (self.server_service or "").strip() or _v.SERVER_SERVICE
-        self.gateway_service = (self.gateway_service or "").strip() or _v.GATEWAY_SERVICE
-        self.model_service = (self.model_service or "").strip() or _v.AIGW_SERVICE
         self.up_service = (self.up_service or "").strip() or _v.UP_SERVICE
+        self.gateway_service = self.server_service
+        self.model_service = self.server_service
 
         if not self.endpoint:
             raise ValueError("hibot: endpoint is required")

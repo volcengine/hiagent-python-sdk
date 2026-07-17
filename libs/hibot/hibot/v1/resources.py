@@ -16,11 +16,13 @@ from .types import (
     V1DirectoryNewParams,
     V1DirectoryUpdateParams,
     V1Resource,
+    V1ResourceBatchCreateParams,
     V1ResourceBatchGetParams,
     V1ResourceDeleteParams,
     V1ResourceGetByNameParams,
     V1ResourceList,
     V1ResourceListParams,
+    V1ResourceMoveParams,
     V1ResourceNewParams,
     V1ResourceUpdateParams,
 )
@@ -32,7 +34,12 @@ class _BaseService:
 
     def _action(self, name: str, body):
         return self._v1.requester.do_action(
-            Action(service=self._v1.services.server, version=SERVER_VERSION, action=name, body=body)
+            Action(
+                service=self._v1.services.server,
+                version=SERVER_VERSION,
+                action=name,
+                body=body,
+            )
         )
 
 
@@ -47,20 +54,30 @@ class DirectoriesService(_BaseService):
         new_id = result.get("ID") if isinstance(result, dict) else None
         if not new_id:
             raise ValueError("hibot: create directory response missing ID")
-        return V1Directory(id=new_id, name=params.name, workspace_id=params.workspace_id)
+        return V1Directory(
+            id=new_id, name=params.name, workspace_id=params.workspace_id
+        )
 
-    def list(self, params: V1DirectoryListParams = V1DirectoryListParams()) -> V1DirectoryList:
+    def list(
+        self, params: V1DirectoryListParams = V1DirectoryListParams()
+    ) -> V1DirectoryList:
         body = {}
         if params.name:
             body["Name"] = params.name
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         if params.page is not None:
-            body["Page"] = {"PageNum": params.page.page_num, "PageSize": params.page.page_size}
+            body["Page"] = {
+                "PageNum": params.page.page_num,
+                "PageSize": params.page.page_size,
+            }
         result = self._action("ListDirectories", body)
         out = V1DirectoryList()
         if isinstance(result, dict):
             out.items = list_from_items(V1Directory, result)
+            from .types import V1Page
+
+            out.page = from_dict(V1Page, result.get("Page"))
         return out
 
     def update(self, params: V1DirectoryUpdateParams) -> None:
@@ -104,7 +121,9 @@ class ResourcesService(_BaseService):
         if not params.name:
             raise ValueError("hibot: resource Name is required")
         if not params.blob_id:
-            raise ValueError("hibot: resource BlobID is required (call uploads.upload_blob first)")
+            raise ValueError(
+                "hibot: resource BlobID is required (call uploads.upload_blob first)"
+            )
         body = {"Name": params.name, "BlobID": params.blob_id}
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
@@ -121,7 +140,26 @@ class ResourcesService(_BaseService):
             directory_id=params.directory_id,
         )
 
-    def list(self, params: V1ResourceListParams = V1ResourceListParams()) -> V1ResourceList:
+    def batch_create(self, params: V1ResourceBatchCreateParams) -> List[V1Resource]:
+        if not params.items:
+            raise ValueError("hibot: resources are required")
+        items = []
+        for item in params.items:
+            if not item.name or not item.blob_id:
+                raise ValueError("hibot: each resource requires Name and BlobID")
+            encoded = {"Name": item.name, "BlobID": item.blob_id}
+            if item.directory_id:
+                encoded["DirectoryID"] = item.directory_id
+            items.append(encoded)
+        body = {"Items": items}
+        if params.workspace_id:
+            body["WorkspaceID"] = params.workspace_id
+        result = self._action("BatchCreateResources", body)
+        return list_from_items(V1Resource, result)
+
+    def list(
+        self, params: V1ResourceListParams = V1ResourceListParams()
+    ) -> V1ResourceList:
         body = {}
         if params.directory_id:
             body["DirectoryID"] = params.directory_id
@@ -130,11 +168,17 @@ class ResourcesService(_BaseService):
         if params.workspace_id:
             body["WorkspaceID"] = params.workspace_id
         if params.page is not None:
-            body["Page"] = {"PageNum": params.page.page_num, "PageSize": params.page.page_size}
+            body["Page"] = {
+                "PageNum": params.page.page_num,
+                "PageSize": params.page.page_size,
+            }
         result = self._action("ListResources", body)
         out = V1ResourceList()
         if isinstance(result, dict):
             out.items = list_from_items(V1Resource, result)
+            from .types import V1Page
+
+            out.page = from_dict(V1Page, result.get("Page"))
         return out
 
     def update(self, params: V1ResourceUpdateParams) -> None:
@@ -146,6 +190,18 @@ class ResourcesService(_BaseService):
         if params.directory_id is not None:
             body["DirectoryID"] = params.directory_id
         self._action("UpdateResource", body)
+
+    def move(self, params: V1ResourceMoveParams) -> None:
+        if not params.resource_id:
+            raise ValueError("hibot: resource id is required")
+        body = {"ResourceID": params.resource_id}
+        if params.old_directory_id:
+            body["OldDirectoryID"] = params.old_directory_id
+        if params.new_directory_id:
+            body["NewDirectoryID"] = params.new_directory_id
+        if params.workspace_id:
+            body["WorkspaceID"] = params.workspace_id
+        self._action("MoveResource", body)
 
     def delete(self, params: V1ResourceDeleteParams) -> None:
         if not params.resource_id:

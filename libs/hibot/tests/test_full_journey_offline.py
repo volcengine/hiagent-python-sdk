@@ -30,7 +30,7 @@ from hibot import (
     V1UploadBlobParams,
 )
 
-_V1_MANAGED_AGENT_MODEL_DOUBAO_SEED_PRO = "doubao-seed-2.0-pro-260215"
+_V1_MANAGED_AGENT_MODEL_DOUBAO_SEED_PRO = "doubao-seed-2-0-pro-260215"
 
 
 def _query(req: httpx.Request) -> dict:
@@ -48,9 +48,9 @@ def _path(req: httpx.Request) -> str:
 def _sse_chat_body() -> bytes:
     """Mirror mocktop's Chat handler: one delta + one completed event."""
     return (
-        b'event: delta\n'
+        b"event: delta\n"
         b'data: {"request_id":"req-test","delta":{"text":"ok"}}\n\n'
-        b'event: completed\n'
+        b"event: completed\n"
         b'data: {"request_id":"req-test","message":{"ID":"message-1","Content":"ok"}}\n\n'
     )
 
@@ -103,8 +103,8 @@ def test_full_journey_streaming_and_batch(
         ok_envelope({"ID": "session-1"}),
         # sessions.chat_streaming -> Chat (SSE)
         sse(sse_body),
-        # sessions.chat -> Chat (SSE)
-        sse(sse_body),
+        # sessions.chat -> Chat (synchronous JSON)
+        ok_envelope({"Message": "ok"}),
     ]
     handler = make_handler(replies)
     client = client_factory(handler, workspace_id="workspace-e2e")
@@ -245,19 +245,17 @@ def test_full_journey_streaming_and_batch(
             elif event.type == "completed":
                 saw_completed = True
             elif event.type == "failed":
-                raise AssertionError(
-                    f"streaming chat failed: {event.error.message}"
-                )
-        assert (
-            saw_completed
-        ), f"streaming chat: no completed event observed (events={streaming_event_names})"
-        assert (
-            saw_delta
-        ), f"streaming chat: no delta event observed (events={streaming_event_names})"
+                raise AssertionError(f"streaming chat failed: {event.error.message}")
+        assert saw_completed, (
+            f"streaming chat: no completed event observed (events={streaming_event_names})"
+        )
+        assert saw_delta, (
+            f"streaming chat: no delta event observed (events={streaming_event_names})"
+        )
         streaming_final = stream.final_message()
-    assert (
-        streaming_final.id and streaming_final.content
-    ), f"streaming final message incomplete: {streaming_final!r}"
+    assert streaming_final.id and streaming_final.content, (
+        f"streaming final message incomplete: {streaming_final!r}"
+    )
 
     # ---------------------------------------------------------------
     # Step 10 (batch): sessions.chat returns the final V1Message.
@@ -265,9 +263,7 @@ def test_full_journey_streaming_and_batch(
     batch_final = client.v1.sessions.chat(
         session.id, V1SessionChatParams(input="批量：再回答一次同样的问题。")
     )
-    assert (
-        batch_final.id and batch_final.content
-    ), f"batch final message incomplete: {batch_final!r}"
+    assert batch_final.content, f"batch final message content empty: {batch_final!r}"
 
     # ---------------------------------------------------------------
     # Step 11: action / routing / body / signing / SSE assertions.
@@ -309,9 +305,9 @@ def test_full_journey_streaming_and_batch(
     # /up subpath only for UploadBlob requests; everything else stays at root.
     for req in handler.calls:
         if _action(req) == "UploadBlob":
-            assert _path(req).endswith(
-                "/up"
-            ), f"UploadBlob path = {_path(req)}, want suffix /up"
+            assert _path(req).endswith("/up"), (
+                f"UploadBlob path = {_path(req)}, want suffix /up"
+            )
         else:
             assert _path(req) in (
                 "",
@@ -321,64 +317,64 @@ def test_full_journey_streaming_and_batch(
     # Every request carries a VOLC v4 Authorization header.
     for req in handler.calls:
         auth = req.headers.get("authorization", "")
-        assert auth.startswith(
-            "HMAC-SHA256 "
-        ), f"missing/invalid Authorization header for action={_action(req)}: {auth!r}"
+        assert auth.startswith("HMAC-SHA256 "), (
+            f"missing/invalid Authorization header for action={_action(req)}: {auth!r}"
+        )
 
     # CreateAgent body verification.
     create_agent_idx = actions.index("CreateAgent")
     create_agent_body = json.loads(handler.calls[create_agent_idx].content)
-    assert (
-        create_agent_body.get("WorkspaceID") == "workspace-e2e"
-    ), f"CreateAgent WorkspaceID = {create_agent_body.get('WorkspaceID')!r}, want workspace-e2e"
-    assert (
-        create_agent_body.get("ModelID") == model.id
-    ), f"CreateAgent ModelID = {create_agent_body.get('ModelID')!r}, want {model.id!r}"
-    assert (
-        create_agent_body.get("EnvID") == "env-1"
-    ), f"CreateAgent EnvID = {create_agent_body.get('EnvID')!r}, want env-1 (from ListEnv default)"
-    assert isinstance(
-        create_agent_body.get("Skills"), list
-    ), f"CreateAgent Skills missing or wrong type: {create_agent_body.get('Skills')!r}"
-    assert isinstance(
-        create_agent_body.get("MCPs"), list
-    ), f"CreateAgent MCPs missing or wrong type: {create_agent_body.get('MCPs')!r}"
-    assert isinstance(
-        create_agent_body.get("Resources"), dict
-    ), f"CreateAgent Resources missing or wrong shape: {create_agent_body.get('Resources')!r}"
+    assert create_agent_body.get("WorkspaceID") == "workspace-e2e", (
+        f"CreateAgent WorkspaceID = {create_agent_body.get('WorkspaceID')!r}, want workspace-e2e"
+    )
+    assert create_agent_body.get("ModelID") == model.id, (
+        f"CreateAgent ModelID = {create_agent_body.get('ModelID')!r}, want {model.id!r}"
+    )
+    assert create_agent_body.get("EnvID") == "env-1", (
+        f"CreateAgent EnvID = {create_agent_body.get('EnvID')!r}, want env-1 (from ListEnv default)"
+    )
+    assert isinstance(create_agent_body.get("Skills"), list), (
+        f"CreateAgent Skills missing or wrong type: {create_agent_body.get('Skills')!r}"
+    )
+    assert isinstance(create_agent_body.get("MCPs"), list), (
+        f"CreateAgent MCPs missing or wrong type: {create_agent_body.get('MCPs')!r}"
+    )
+    assert isinstance(create_agent_body.get("Resources"), dict), (
+        f"CreateAgent Resources missing or wrong shape: {create_agent_body.get('Resources')!r}"
+    )
 
     # CreateSession body verification.
     create_session_idx = actions.index("CreateSession")
     create_session_body = json.loads(handler.calls[create_session_idx].content)
-    assert (
-        create_session_body.get("AgentID") == agent.id
-    ), f"CreateSession AgentID = {create_session_body.get('AgentID')!r}, want {agent.id!r}"
+    assert create_session_body.get("AgentID") == agent.id, (
+        f"CreateSession AgentID = {create_session_body.get('AgentID')!r}, want {agent.id!r}"
+    )
     payload = create_session_body.get("Payload")
-    assert isinstance(
-        payload, dict
-    ), f"CreateSession Payload missing: {create_session_body!r}"
-    assert (
-        payload.get("Channel") == "webchat"
-    ), f"CreateSession Channel = {payload.get('Channel')!r}, want webchat"
-    assert (
-        payload.get("PeerKind") == "system"
-    ), f"CreateSession PeerKind = {payload.get('PeerKind')!r}, want system"
-    assert (
-        payload.get("PeerID") == agent.id
-    ), f"CreateSession PeerID = {payload.get('PeerID')!r}, want {agent.id!r}"
+    assert isinstance(payload, dict), (
+        f"CreateSession Payload missing: {create_session_body!r}"
+    )
+    assert payload.get("Channel") == "webchat", (
+        f"CreateSession Channel = {payload.get('Channel')!r}, want webchat"
+    )
+    assert payload.get("PeerKind") == "system", (
+        f"CreateSession PeerKind = {payload.get('PeerKind')!r}, want system"
+    )
+    assert payload.get("PeerID") == agent.id, (
+        f"CreateSession PeerID = {payload.get('PeerID')!r}, want {agent.id!r}"
+    )
 
     # Chat body verification — use the *batch* (last) Chat request which carries
     # the "批量" content; both chat calls go to the same Action so disambiguate
     # by indexing the last occurrence.
     last_chat_idx = len(actions) - 1 - actions[::-1].index("Chat")
     chat_body = json.loads(handler.calls[last_chat_idx].content)
-    assert (
-        chat_body.get("SessionID") == session.id
-    ), f"Chat SessionID = {chat_body.get('SessionID')!r}, want {session.id!r}"
-    assert (
-        chat_body.get("AgentID") == agent.id
-    ), f"Chat AgentID = {chat_body.get('AgentID')!r}, want {agent.id!r} (SDK should infer agent from session)"
+    assert chat_body.get("SessionID") == session.id, (
+        f"Chat SessionID = {chat_body.get('SessionID')!r}, want {session.id!r}"
+    )
+    assert chat_body.get("AgentID") == agent.id, (
+        f"Chat AgentID = {chat_body.get('AgentID')!r}, want {agent.id!r} (SDK should infer agent from session)"
+    )
     content = chat_body.get("Content", "")
-    assert (
-        "批量" in content
-    ), f"Chat Content = {content!r}, want contains '批量'"
+    assert "批量" in content, f"Chat Content = {content!r}, want contains '批量'"
+    assert chat_body.get("Approve") == "all"
+    assert chat_body.get("Stream") is False

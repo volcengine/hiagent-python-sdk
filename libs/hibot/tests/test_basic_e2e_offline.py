@@ -23,13 +23,6 @@ def _action(req: httpx.Request) -> str:
 
 
 def test_basic_e2e_offline(client_factory, make_handler, ok_envelope, sse):
-    sse_body = (
-        b'event: message_delta\n'
-        b'data: {"text":"Hi"}\n\n'
-        b'event: run_completed\n'
-        b'data: {"message":{"ID":"msg-1","Role":"assistant","Content":"Hi"}}\n\n'
-    )
-
     replies = [
         # uploads.upload_blob -> /up subpath
         ok_envelope({"BlobID": "blob-1"}),
@@ -41,8 +34,8 @@ def test_basic_e2e_offline(client_factory, make_handler, ok_envelope, sse):
         ok_envelope({"ID": "agent-1"}),
         # sessions.create
         ok_envelope({"ID": "sess-1"}),
-        # sessions.chat (gateway, SSE)
-        sse(sse_body),
+        # sessions.chat (server, synchronous JSON)
+        ok_envelope({"Message": "Hi"}),
     ]
     handler = make_handler(replies)
     client = client_factory(handler)
@@ -69,7 +62,7 @@ def test_basic_e2e_offline(client_factory, make_handler, ok_envelope, sse):
     assert session.id == "sess-1"
 
     msg = client.v1.sessions.chat(session.id, V1SessionChatParams(input="hi"))
-    assert msg.id == "msg-1"
+    assert msg.id is None
     assert msg.content == "Hi"
 
     # Verify routing & envelope expectations

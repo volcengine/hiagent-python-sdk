@@ -12,6 +12,9 @@ from hibot import (
     V1AgentGetParams,
     V1AgentNewParams,
     V1AgentNewParamsToolUnion,
+    V1AgentResumeParams,
+    V1AgentRetryCreateParams,
+    V1AgentStopParams,
     V1ManagedAgentMCPToolParams,
     V1ManagedAgentModelConfigParams,
     V1ManagedAgentResourceRefParams,
@@ -24,7 +27,9 @@ def _query_action(req: httpx.Request) -> str:
     return q.get("Action", [""])[0]
 
 
-def test_create_agent_auto_resolves_default_environment(client_factory, make_handler, ok_envelope):
+def test_create_agent_auto_resolves_default_environment(
+    client_factory, make_handler, ok_envelope
+):
     # Sequence: ListEnv -> [{ID:e1,...}, {ID:e2,...}], then CreateAgent.
     list_envs_reply = ok_envelope(
         {
@@ -47,11 +52,13 @@ def test_create_agent_auto_resolves_default_environment(client_factory, make_han
             V1AgentNewParamsToolUnion(
                 of_skill=V1ManagedAgentSkillToolParams(skill_version_id="sv-1")
             ),
-            V1AgentNewParamsToolUnion(
-                of_mcp=V1ManagedAgentMCPToolParams(id="mcp-1")
-            ),
+            V1AgentNewParamsToolUnion(of_mcp=V1ManagedAgentMCPToolParams(id="mcp-1")),
         ],
         resources=[V1ManagedAgentResourceRefParams(id="res-1")],
+        description="demo",
+        metadata={"team": "sdk"},
+        api_protocol_type="responses",
+        model_interactive_mode="direct",
     )
     agent = client.v1.agents.create(params)
     assert agent.id == "agent-1"
@@ -73,6 +80,10 @@ def test_create_agent_auto_resolves_default_environment(client_factory, make_han
     assert body["Skills"] == [{"ID": "sv-1"}]
     assert body["MCPs"] == [{"ID": "mcp-1", "Enabled": True}]
     assert body["Resources"] == {"ResourceIDs": ["res-1"]}
+    assert body["Description"] == "demo"
+    assert body["Metadata"] == {"team": "sdk"}
+    assert body["ApiProtocolType"] == "responses"
+    assert body["ModelInteractiveMode"] == "direct"
 
 
 def test_get_agent_requires_agent_id(client_factory, make_handler):
@@ -93,3 +104,24 @@ def test_delete_agent_uses_server_service(client_factory, make_handler, ok_envel
     # Service routed to server
     q = parse_qs(urlsplit(str(req.url)).query)
     assert q["Version"][0] == "2026-04-23"
+
+
+def test_agent_lifecycle_actions_use_server(client_factory, make_handler, ok_envelope):
+    handler = make_handler([ok_envelope({}), ok_envelope({}), ok_envelope({})])
+    client = client_factory(handler)
+
+    client.v1.agents.retry_create(V1AgentRetryCreateParams(agent_id="a-1"))
+    client.v1.agents.stop(V1AgentStopParams(agent_id="a-1"))
+    client.v1.agents.resume(V1AgentResumeParams(agent_id="a-1"))
+
+    assert [_query_action(request) for request in handler.calls] == [
+        "RetryCreateAgent",
+        "StopAgent",
+        "ResumeAgent",
+    ]
+    for request in handler.calls:
+        assert request.headers["x-top-service"] == "hibot-server"
+        assert json.loads(request.content) == {
+            "AgentID": "a-1",
+            "WorkspaceID": "ws-1",
+        }
