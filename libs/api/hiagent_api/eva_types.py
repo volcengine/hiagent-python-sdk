@@ -164,6 +164,24 @@ class EvaTaskSource(str, Enum):
     DATASET = "Dataset"
     TRACE = "Trace"
 
+
+class EvaTaskRunConfigInitiator(str, Enum):
+    PLATFORM = "Platform"
+    SDK = "SDK"
+
+
+class EvaTaskRunConfig(BaseModel):
+    Initiator: Optional[EvaTaskRunConfigInitiator] = Field(
+        default=None, description="Task initiator: Platform or SDK"
+    )
+    AgenticTaskID: Optional[str] = Field(
+        default=None, description="Auto-generated task ID"
+    )
+    EnableAttribAnalysis: Optional[bool] = Field(
+        default=None, description="Whether to enable attribution analysis"
+    )
+
+
 class EvaExecParam(BaseModel):
     Name: str = Field(..., description="Param name")
     Required: bool = Field(..., description="Whether required")
@@ -254,6 +272,9 @@ class CreateEvaTaskRequest(BaseModel):
         default=None, title="Dataset Task Configuration", description="Dataset task configuration"
     )
     Source: EvaTaskSource = Field(title="Task Source", description="Task source: Dataset or Trace")
+    RunConfig: Optional[EvaTaskRunConfig] = Field(
+        default=None, title="Run Config", description="Task run configuration"
+    )
 
 
 class CreateEvaTaskResponse(BaseModel):

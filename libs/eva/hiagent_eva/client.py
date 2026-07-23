@@ -174,6 +174,10 @@ class Client:
                 VersionID=dataset_version_id,
             ),
             Source=eva_types.EvaTaskSource.DATASET,
+            RunConfig=eva_types.EvaTaskRunConfig(
+                Initiator=eva_types.EvaTaskRunConfigInitiator.SDK,
+                EnableAttribAnalysis=False,
+            ),
         )
 
         return self.eva_service.CreateEvaTask(request)

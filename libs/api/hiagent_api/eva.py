@@ -166,8 +166,11 @@ class EvaService(Service):
         Returns:
             CreateEvaTaskResponse: Created evaluation task information
         """
+        params_dict = params.model_dump()
+        if params.RunConfig is not None:
+            params_dict["RunConfig"] = params.RunConfig.model_dump(exclude_none=True)
         return eva_types.CreateEvaTaskResponse.model_validate(
-            self.__request("CreateEvaTask", params.model_dump())
+            self.__request("CreateEvaTask", params_dict)
         )
 
     def ListDatasetCases(
