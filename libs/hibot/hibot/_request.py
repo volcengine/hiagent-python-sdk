@@ -128,6 +128,8 @@ class Requester:
             "Content-Type": content_type,
             "X-Top-Service": action.service,
         }
+        if self._cfg.product_code:
+            headers["X-Trace-Product-Code"] = self._cfg.product_code
         if action.stream:
             headers["Accept"] = "text/event-stream"
 

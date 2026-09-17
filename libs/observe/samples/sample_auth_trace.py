@@ -30,6 +30,7 @@ if __name__ == "__main__":
             sk=os.getenv("VOLC_SECRETKEY"),
             workspace_id=os.getenv("WORKSPACE_ID"),
             app_id=os.getenv("CUSTOM_APP_ID"),
+            product_code=os.getenv("HIAGENT_PRODUCT_CODE"),
         )
     except Exception as e:
         raise RuntimeError(e)

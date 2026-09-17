@@ -24,6 +24,7 @@ if __name__ == "__main__":
     observe = ObserveService(
         endpoint=os.getenv("HIAGENT_TOP_ENDPOINT"), region="cn-north-1"
     )
+    observe.set_product_code(os.getenv("HIAGENT_PRODUCT_CODE"))
 
     result = observe.TraceAIProcess(
         {

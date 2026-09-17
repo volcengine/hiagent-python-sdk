@@ -26,15 +26,18 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.semconv.resource import ResourceAttributes
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
+from hiagent_api.product_code import PRODUCT_CODE_HEADER, normalize_product_code
 
 logger = logging.getLogger(__name__)
 
 
 class AuthSession(requests.Session):
-    def __init__(self, endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str):
+    def __init__(self, endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str,
+                 product_code=None):
         super().__init__()
         self.workspace_id = workspace_id
         self.app_id = app_id
+        self.product_code = normalize_product_code(product_code)
         self.token = None
         self.expires_at = 0
         self.observe_svc = ObserveService(endpoint=endpoint, region="cn-north-1")
@@ -67,6 +70,8 @@ class AuthSession(requests.Session):
 
         headers = headers or {}
         headers["Authorization"] = f"Bearer {self.token}"
+        if self.product_code:
+            headers.setdefault(PRODUCT_CODE_HEADER, self.product_code)
         logger.debug(f"requesting {url} to export trace data")
 
         response = super().request(method, url, headers=headers, **kwargs)
@@ -87,8 +92,9 @@ def init(
     sk: str,
     workspace_id: str,
     app_id: str,
+    product_code=None,
 ):
-    auth_session = AuthSession(top_endpoint, ak, sk, workspace_id, app_id)
+    auth_session = AuthSession(top_endpoint, ak, sk, workspace_id, app_id, product_code)
 
     try:
         token = auth_session.get_token()

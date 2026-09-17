@@ -42,6 +42,7 @@ from volcengine.base.Service import Service
 from volcengine.Policy import ComplexEncoder, InnerToken, SecurityToken2
 from volcengine.ServiceInfo import ServiceInfo
 from volcengine.util.Util import *
+from .product_code import PRODUCT_CODE_HEADER, normalize_product_code, has_header
 
 VERSION = "0.0.1"
 
@@ -77,6 +78,14 @@ class Service(object):
         self.api_info = api_info
         self.init()
         self.init_http_client(http_client, async_http_client)
+        self.product_code = None
+
+    def set_product_code(self, product_code):
+        self.product_code = normalize_product_code(product_code)
+        return self
+
+    def get_product_code(self):
+        return self.product_code
 
     def init_http_client(
             self,
@@ -391,6 +400,8 @@ class Service(object):
         r.set_socket_timeout(socket_timeout)
 
         mheaders = self.merge(api_info.header, self.service_info.header)
+        if self.product_code and not has_header(mheaders, PRODUCT_CODE_HEADER):
+            mheaders[PRODUCT_CODE_HEADER] = self.product_code
         mheaders["Host"] = self.service_info.host
         mheaders["User-Agent"] = "hiagent-python-sdk" + VERSION
         r.set_headers(mheaders)
@@ -492,6 +503,9 @@ class AppAPIMixin:
         app_url = f"{self.base_url}/{action}"
 
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        product_code = getattr(self, "product_code", None)
+        if product_code:
+            headers[PRODUCT_CODE_HEADER] = product_code
         if _headers is not None:
             headers.update(_headers)
         response = await self.async_http_client.post(
@@ -514,6 +528,9 @@ class AppAPIMixin:
 
         app_url = f"{self.base_url}/{action}"
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        product_code = getattr(self, "product_code", None)
+        if product_code:
+            headers[PRODUCT_CODE_HEADER] = product_code
         if _headers is not None:
             headers.update(_headers)
 
@@ -538,6 +555,9 @@ class AppAPIMixin:
         app_url = f"{self.base_url}/{action}"
 
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        product_code = getattr(self, "product_code", None)
+        if product_code:
+            headers[PRODUCT_CODE_HEADER] = product_code
 
         with connect_sse(
                 self.http_client,
@@ -560,6 +580,9 @@ class AppAPIMixin:
         app_url = f"{self.base_url}/{action}"
 
         headers = {"Apikey": f"{app_key}", "Content-Type": "application/json"}
+        product_code = getattr(self, "product_code", None)
+        if product_code:
+            headers[PRODUCT_CODE_HEADER] = product_code
 
         async with aconnect_sse(
                 self.async_http_client,

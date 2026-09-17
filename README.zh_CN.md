@@ -4,6 +4,19 @@
 
 HiAgent-SDK是火山引擎的HiAgent产品的SDK，开发者可使用该SDK，快捷的开发功能，提升开发效率。HiAgent-SDK提供了完整的AI原生应用开发套件，包括丰富的开发组件和应用示例代码。
 
+## productCode
+
+SDK 支持可选的 `productCode` 配置，并通过 `X-Trace-Product-Code` Header 传递。未配置或配置为空白时不发送该 Header。
+
+```python
+from hiagent_api.chat import ChatService
+
+service = ChatService(endpoint="https://open.volcengineapi.com")
+service.set_product_code("your-product-code")
+```
+
+Hibot 使用 `Config(..., product_code="your-product-code")`；Observe 和 EVA 的初始化函数支持末尾可选参数 `product_code`。不传该参数时保持原有行为。
+
 ## 架构
 
 ![img.png](img.png)

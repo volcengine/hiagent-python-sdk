@@ -19,7 +19,9 @@ from typing import Dict, Iterable, Mapping, Optional, Tuple
 from urllib.parse import quote, urlsplit
 
 ALGORITHM = "HMAC-SHA256"
-SIGNED_HEADERS_INCLUDE = ("content-type", "host", "x-content-sha256", "x-date")
+SIGNED_HEADERS_INCLUDE = (
+    "content-type", "host", "x-content-sha256", "x-date", "x-trace-product-code"
+)
 
 
 def _utcnow() -> _dt.datetime:

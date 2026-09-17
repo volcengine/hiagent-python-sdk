@@ -25,11 +25,11 @@ from hiagent_api.eva_types import EvaTaskSource, GetEvaTaskReportResponse
 logger = logging.getLogger(__name__)
 
 
-def init(endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str):
+def init(endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str, product_code=None):
     """
     Initialize client configuration
     """
-    return Client(endpoint, ak, sk, workspace_id, app_id)
+    return Client(endpoint, ak, sk, workspace_id, app_id, product_code)
 
 
 def _convert_to_case_data_list(
@@ -65,7 +65,8 @@ def _convert_to_case_data_list(
 class Client:
     """Eva SDK Client Class"""
 
-    def __init__(self, endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str):
+    def __init__(self, endpoint: str, ak: str, sk: str, workspace_id: str, app_id: str,
+                 product_code=None):
         """
         Initialize client configuration
 
@@ -79,6 +80,7 @@ class Client:
         self.endpoint = endpoint
         self.workspace_id = workspace_id
         self.app_id = app_id
+        self.product_code = product_code
         self.logger = logging.getLogger(__name__)
 
         # Initialize Eva service
@@ -86,6 +88,7 @@ class Client:
 
         self.eva_service.set_ak(ak)
         self.eva_service.set_sk(sk)
+        self.eva_service.set_product_code(product_code)
 
         self.logger.info(f"Eva client initialized with endpoint: {endpoint}")
 

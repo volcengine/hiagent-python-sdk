@@ -8,6 +8,17 @@ from typing import Optional
 from . import _version as _v
 
 
+def _normalize_product_code(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    value = str(value).strip()
+    if not value:
+        return None
+    if any(ord(ch) < 32 or ord(ch) == 127 for ch in value):
+        raise ValueError("product_code must not contain HTTP control characters")
+    return value
+
+
 @dataclass
 class Config:
     endpoint: str
@@ -25,12 +36,14 @@ class Config:
     # SDK build defaults internally.
     http_client: Optional[object] = None
     async_http_client: Optional[object] = None
+    product_code: Optional[str] = None
 
     def __post_init__(self) -> None:
         self.endpoint = (self.endpoint or "").strip()
         self.access_key = (self.access_key or "").strip()
         self.secret_key = (self.secret_key or "").strip()
         self.workspace_id = (self.workspace_id or "").strip()
+        self.product_code = _normalize_product_code(self.product_code)
         self.region = (self.region or "").strip() or _v.DEFAULT_REGION
         self.server_service = (self.server_service or "").strip() or _v.SERVER_SERVICE
         self.up_service = (self.up_service or "").strip() or _v.UP_SERVICE

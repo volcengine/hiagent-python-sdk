@@ -40,6 +40,7 @@ if __name__ == "__main__":
       trace_endpoint=os.getenv("HIAGENT_TRACE_ENDPOINT"),
       # 配置为 HiAgent 的 Top Endpoint
       top_endpoint=os.getenv("HIAGENT_TOP_ENDPOINT"),
+      product_code=os.getenv("HIAGENT_PRODUCT_CODE"),
       # 配置为 HiAgent 的个人中心申请的 access key
       ak=os.getenv("VOLC_ACCESSKEY"),
       # 配置为 HiAgent 的个人中心申请的 secret key

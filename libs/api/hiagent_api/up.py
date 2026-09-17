@@ -23,6 +23,7 @@ from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
 from hiagent_api import up_types
+from hiagent_api.product_code import PRODUCT_CODE_HEADER, normalize_product_code
 
 
 class UpService(Service):
@@ -30,6 +31,18 @@ class UpService(Service):
         self.service_info = UpService.get_service_info(endpoint, region)
         self.api_info = UpService.get_api_info()
         super(UpService, self).__init__(self.service_info, self.api_info)
+
+    def set_product_code(self, product_code):
+        product_code = normalize_product_code(product_code)
+        if product_code:
+            self.service_info.header[PRODUCT_CODE_HEADER] = product_code
+        else:
+            self.service_info.header.pop(PRODUCT_CODE_HEADER, None)
+        self.product_code = product_code
+        return self
+
+    def get_product_code(self):
+        return getattr(self, "product_code", None)
 
     @staticmethod
     def get_service_info(endpoint, region):
