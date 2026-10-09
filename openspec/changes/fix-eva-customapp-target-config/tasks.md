@@ -1,0 +1,4 @@
+- [x] Reproduce the incorrect `TargetConfig` shape with an offline regression test.
+- [x] Wrap the custom application configuration under `CustomAPPConfig`.
+- [x] Run the targeted EVA regression test.
+- [ ] Run the complete EVA test suite and build the package.

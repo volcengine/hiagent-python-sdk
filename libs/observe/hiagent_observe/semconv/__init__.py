@@ -15,6 +15,10 @@ from enum import Enum
 
 
 class SpanType(Enum):
+    ROOT = "root"
+    """
+    ROOT 表示一次调用的根 span
+    """
     START = "start"
     """
     START 表示开始调用模型或者工作流

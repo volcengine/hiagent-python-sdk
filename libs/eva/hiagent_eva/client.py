@@ -137,7 +137,7 @@ class Client:
                 Type=eva_types.EvaTargetType.CUSTOM_APP,
                 TargetID=self.app_id,
                 TargetName=f"App-{self.app_id}",
-                TargetConfig=custom_app_cfg,
+                TargetConfig={"CustomAPPConfig": custom_app_cfg},
             )
         ]
 

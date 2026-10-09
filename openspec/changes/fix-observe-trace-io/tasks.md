@@ -1,0 +1,6 @@
+- [x] 检查 Python 示例与 trace-level 聚合规则的字段映射。
+- [x] 增加 `SpanType.ROOT`。
+- [x] 调整 `sample_chainlit.py` 的 root/start/output 和 JSON 属性。
+- [x] 补充 proposal、design、spec 和 tasks。
+- [x] 执行 Observe 定向测试、语法检查和受影响包构建。
+- [ ] 在真实 Observe 环境生成新 Trace，验证页面列表和 JSON 预览。
