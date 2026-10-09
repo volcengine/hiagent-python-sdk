@@ -33,8 +33,8 @@ setup(
         "click>=8.0.0",
         "prompt-toolkit>=3.0.0",
         "pydantic>=2.0.0",
-        "hiagent-api>=0.1.0,<3.0.0",
-        "hiagent-components>=0.1.0,<3.0.0",
+        "hiagent-api>=3.1.0,<4.0.0",
+        "hiagent-components>=3.1.0,<4.0.0",
     ],
     extras_require={
         "dev": [

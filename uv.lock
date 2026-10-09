@@ -1005,7 +1005,7 @@ wheels = [
 
 [[package]]
 name = "hiagent-api"
-version = "2.6.0"
+version = "3.1.0"
 source = { editable = "libs/api" }
 dependencies = [
     { name = "aiofiles" },
@@ -1038,7 +1038,7 @@ dev = [{ name = "dotenv", specifier = ">=0.9.9" }]
 
 [[package]]
 name = "hiagent-components"
-version = "2.0.2"
+version = "3.1.0"
 source = { editable = "libs/components" }
 dependencies = [
     { name = "hiagent-api" },
@@ -1077,7 +1077,7 @@ integrations = [
 
 [[package]]
 name = "hiagent-eva"
-version = "2.6.0"
+version = "3.1.0"
 source = { editable = "libs/eva" }
 dependencies = [
     { name = "hiagent-api" },
@@ -1104,7 +1104,7 @@ dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "hiagent-observe"
-version = "2.0.2"
+version = "3.1.0"
 source = { editable = "libs/observe" }
 dependencies = [
     { name = "hiagent-api" },
@@ -1137,7 +1137,7 @@ dev = [{ name = "chainlit", specifier = ">=2.9.4" }]
 
 [[package]]
 name = "hiagent-sdk-monorepo"
-version = "0.1.0"
+version = "3.1.0"
 source = { virtual = "." }
 
 [package.dev-dependencies]

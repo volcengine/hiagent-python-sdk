@@ -111,6 +111,10 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
             span.set_attributes(
                 {
                     semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.START.value,
+                    semconv.SemanticConvention.INPUT: json.dumps(
+                        {"input": self.input}, ensure_ascii=False
+                    ),
+                    semconv.SemanticConvention.INPUT_RAW: self.input,
                 }
             )
 
@@ -126,10 +130,7 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                             latency, 1
                         ),
                         semconv.SemanticConvention.INPUT: json.dumps(
-                            {
-                                "input": self.input,
-                            },
-                            ensure_ascii=False,
+                            {"input": self.input}, ensure_ascii=False
                         ),
                         semconv.SemanticConvention.INPUT_RAW: self.input,
                     }
@@ -153,7 +154,9 @@ class FirstTokenLatencyCallback(BaseCallbackHandler):
                     semconv.SemanticConvention.LATENCT_FIRST_RESP: self.latency_first_resp,
                     semconv.SemanticConvention.MODEL_ID: model_id,
                     semconv.SemanticConvention.MODEL_NAME: model_name,
-                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.LLM.value,
+                    # 当前 trace-level 聚合逻辑只会将 start Span 上的 output
+                    # 写入页面读取的 Attributes.output。
+                    semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.START.value,
                     semconv.SemanticConvention.INPUT: json.dumps(
                         {
                             "input": self.input,
@@ -216,9 +219,12 @@ async def on_message(message: cl.Message):
     with helper.start_trace(name="do-worker", provider=provider) as span:
         span.set_attributes(
             {
+                semconv.SemanticConvention.SPAN_TYPE: semconv.SpanType.ROOT.value,
                 semconv.SemanticConvention.CONVERSATION_ID: conversation_id,
                 semconv.SemanticConvention.MESSAGE_ID: message_id,
-                semconv.SemanticConvention.INPUT: message.content,
+                semconv.SemanticConvention.INPUT: json.dumps(
+                    {"input": message.content}, ensure_ascii=False
+                ),
                 semconv.SemanticConvention.INPUT_RAW: message.content,
                 semconv.SemanticConvention.MODEL_ID: model_id,
                 semconv.SemanticConvention.MODEL_NAME: model_name,

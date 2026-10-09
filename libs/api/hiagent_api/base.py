@@ -44,7 +44,7 @@ from volcengine.ServiceInfo import ServiceInfo
 from volcengine.util.Util import *
 from .product_code import PRODUCT_CODE_HEADER, normalize_product_code, has_header
 
-VERSION = "0.0.1"
+VERSION = "3.1.0"
 
 
 class VolcAuth(AuthBase):

@@ -1,6 +1,6 @@
 [project]
 name = "hiagent-sdk-monorepo"
-version = "0.1.0"
+version = "3.1.0"
 description = "HiAgent SDK monorepo"
 license = { text = "apache-2.0" }
 readme = "README.md"
