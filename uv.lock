@@ -1104,7 +1104,7 @@ dev = [{ name = "pytest", specifier = ">=9.0.3" }]
 
 [[package]]
 name = "hiagent-observe"
-version = "3.1.0"
+version = "3.1.1"
 source = { editable = "libs/observe" }
 dependencies = [
     { name = "hiagent-api" },
