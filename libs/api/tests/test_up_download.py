@@ -36,13 +36,20 @@ def _listing(directory):
     return sorted(os.listdir(directory))
 
 
-def test_writes_file_and_creates_parent_directories(tmp_path):
+def test_writes_file(tmp_path):
     service, adapter = make_service(_serve())
-    target = tmp_path / "a" / "b" / "file.bin"
+    target = tmp_path / "file.bin"
     assert _download(service, target) is None
     assert target.read_bytes() == CONTENT
-    assert _listing(target.parent) == ["file.bin"]
+    assert _listing(tmp_path) == ["file.bin"]
     assert_signed_as_sent(adapter.sent[0])
+
+
+def test_missing_parent_directory_is_not_created(tmp_path):
+    service, _ = make_service(_serve())
+    with pytest.raises(FileNotFoundError):
+        _download(service, tmp_path / "missing" / "file.bin")
+    assert _listing(tmp_path) == []
 
 
 def test_parameters_go_in_query_with_empty_body_and_no_save_to(tmp_path):

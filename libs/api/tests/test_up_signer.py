@@ -16,7 +16,7 @@ def _x_date_to_datetime(x_date):
     return datetime.strptime(x_date, "%Y%m%dT%H%M%SZ").replace(tzinfo=timezone.utc)
 
 
-def _sign(url="https://up.example.com/up?Action=Delete", headers=None, **overrides):
+def _sign(url="https://up.example.com/up?Action=Delete", payload_hash=EMPTY_SHA256, **overrides):
     kwargs = {
         "ak": "AKLTtest",
         "sk": "secret",
@@ -25,9 +25,7 @@ def _sign(url="https://up.example.com/up?Action=Delete", headers=None, **overrid
         "now": NOW,
     }
     kwargs.update(overrides)
-    if headers is None:
-        headers = {"X-Content-Sha256": EMPTY_SHA256}
-    return _up_signer.sign("POST", url, headers, **kwargs)
+    return _up_signer.sign("POST", url, payload_hash, **kwargs)
 
 
 @pytest.mark.parametrize("vector", VECTORS["vectors"], ids=lambda v: v["name"])
@@ -44,7 +42,7 @@ def test_matches_vectors_generated_by_up_verifier(vector):
     signed = _up_signer.sign(
         vector["method"],
         vector["url"],
-        {"X-Content-Sha256": vector["contentSha256"]},
+        vector["contentSha256"],
         ak=VECTORS["accessKey"],
         sk=VECTORS["secretKey"],
         region=VECTORS["region"],
@@ -83,25 +81,11 @@ def test_empty_path_is_root():
     assert canonical.split("\n")[1] == "/"
 
 
-def test_finds_content_sha256_case_insensitively_and_strips_it():
-    lower = _sign(headers={"x-content-sha256": f"  {EMPTY_SHA256} "})
-    exact = _sign(headers={"X-Content-Sha256": EMPTY_SHA256})
-    assert lower["Authorization"] == exact["Authorization"]
-
-
-@pytest.mark.parametrize("value", [None, "", "   "])
-def test_rejects_missing_content_sha256(value):
-    headers = {} if value is None else {"X-Content-Sha256": value}
-    with pytest.raises(ValueError, match="X-Content-Sha256"):
-        _sign(headers=headers)
-
-
-def test_does_not_mutate_input_headers_and_does_not_sign_host():
-    headers = {"X-Content-Sha256": EMPTY_SHA256, "Host": "a.example.com"}
-    signed = _sign(headers=headers)
-    assert headers == {"X-Content-Sha256": EMPTY_SHA256, "Host": "a.example.com"}
+def test_returns_only_signing_headers_and_does_not_sign_host():
+    signed = _sign()
+    assert set(signed) == {"X-Date", "Authorization"}
     assert "SignedHeaders=x-content-sha256;x-date," in signed["Authorization"]
-    other_host = _sign(headers={**headers, "Host": "b.example.com"})
+    other_host = _sign(url="https://other.example.com/up?Action=Delete")
     assert other_host["Authorization"] == signed["Authorization"]
 
 

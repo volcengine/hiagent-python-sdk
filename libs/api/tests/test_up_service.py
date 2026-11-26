@@ -13,6 +13,7 @@ from up_fakes import (
     response,
     sha256_hex,
 )
+from volcengine.ApiInfo import ApiInfo
 
 CONTENT = b"hello up service\n" * 64
 UPPER_SHA = "AB" * 32
@@ -101,6 +102,16 @@ def test_every_action_is_a_signed_post(tmp_path):
         assert "SignedHeaders=x-content-sha256;x-date," in sent.headers["Authorization"]
         assert_signed_as_sent(sent)
     assert [s.path for s in adapter.sent] == ["/up", "/up", "/up", "/up", "/down"]
+
+
+def test_method_comes_from_api_info_for_both_signing_and_sending():
+    service, adapter = make_service(_ok({}))
+    query = {"Action": "Delete", "Version": "2022-01-01"}
+    service.api_info["Delete"] = ApiInfo("PUT", "/up", query, {}, {})
+    service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
+    sent = adapter.sent[0]
+    assert sent.method == "PUT"
+    assert_signed_as_sent(sent)
 
 
 def test_product_code_is_sent_but_not_signed():

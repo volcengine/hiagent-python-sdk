@@ -20,11 +20,10 @@
 - **WHEN** 请求的 `Host` 与 endpoint 主机名不同
 - **THEN** 签名结果不受影响
 
-#### Scenario: X-Content-Sha256 的查找
+#### Scenario: 签名与发送使用同一个 method
 
-- **WHEN** 请求头中的 `x-content-sha256` 键名大小写不同或值带首尾空白
-- **THEN** 签名器必须找到该值并去掉首尾空白后使用
-- **AND** 缺失或为空白串时必须抛出 `ValueError`
+- **WHEN** 某个 Action 的 `ApiInfo` method 被改为 `POST` 以外的值
+- **THEN** 发出的请求使用该 method，按收到的请求重算的签名仍然一致
 
 ### Requirement: 凭证校验不泄漏凭证
 
@@ -203,7 +202,12 @@ SDK 发出的所有 sha256 都必须（MUST）去掉首尾空白并转小写，�
 #### Scenario: 下载成功
 
 - **WHEN** `Download` 收到 200 响应
-- **THEN** 目标文件内容必须与响应体一致，缺失的父目录会被自动创建
+- **THEN** 目标文件内容必须与响应体一致
+
+#### Scenario: 父目录不存在
+
+- **WHEN** `SaveTo` 的父目录不存在
+- **THEN** SDK 抛出 `FileNotFoundError`，不自动创建目录，与旧版 `open(SaveTo, "wb")` 一致
 
 #### Scenario: 下载中断
 

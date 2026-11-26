@@ -61,15 +61,15 @@ UP 按 `?Action=<Name>` 反射到同名 handler，不按路径路由（`dispatch
 问题的根源是"签名材料"和"发出的请求"是两份东西。新增包内模块 `hiagent_api/_up_signer.py`，从 Java `UpSigner` 移植，只有一个入口：
 
 ```python
-def sign(method: str, url: str, headers: Mapping[str, str], *, ak: str, sk: str,
+def sign(method: str, url: str, payload_hash: str, *, ak: str, sk: str,
          region: str, session_token: str | None = None,
          now: datetime | None = None) -> dict[str, str]
 ```
 
-- 输入就是要交给 `requests` 的 `method`、完整 `url`、`headers`，返回在 `headers` 基础上新增 `X-Date`、`Authorization`（使用 STS 时再加 `X-Security-Token`，不参与签名）的新 dict，不修改入参。
+- 输入就是要交给 `requests` 的 `method`、完整 `url`，以及要放进 `X-Content-Sha256` 的值；只返回要加到请求上的 `X-Date`、`Authorization`（使用 STS 时再加 `X-Security-Token`，不参与签名），由调用方 `update` 进自己的 Header。
 - path：`urllib.parse.unquote(urlsplit(url).path)`，与 Go 的 `URL.Path` 一致，`+` 保持字面；空路径按 `/`。
 - query：取 `urlsplit(url).query` 原文，按 `&` 拆对，名和值都用 `urllib.parse.unquote_plus` 解码（与 Go `url.ParseQuery`、Java `URLDecoder` 一致，`+` 解为空格），按参数名排序（同名保持原顺序），再用 `urllib.parse.quote(s, safe="-_.~")` 编码，与 Java `signEncode` 等价。
-- payload hash：按不区分大小写的方式查找 `X-Content-Sha256`，去首尾空白后使用；缺失或为空白串时抛 `ValueError`，不提供任何"另算一份哈希"的路径。
+- payload hash：由调用方传入，`_send` 把同一个变量同时写进 `X-Content-Sha256` 和传给签名器，两者不会不一致；签名器不自己计算请求体哈希。
 - 时间：`now` 只供测试注入固定时间，生产调用不传，取 `datetime.now(timezone.utc)`；传入时先 `astimezone(timezone.utc)`。`X-Date` 格式为 `%Y%m%dT%H%M%SZ`。
 - SignedHeaders 固定为 `x-content-sha256;x-date`。不签 `host`，经网关改写 Host 时不会失配；不签 `X-Trace-Product-Code`，productCode 有无不影响签名。
 - credential scope 的 service 固定为 `up`，与现在 `UpService` 的 `Credentials("", "", "up", region)` 一致。
@@ -114,7 +114,8 @@ Headers  CaseInsensitiveDict(service_info.header)（Accept、已配置的 X-Trac
          User-Agent 为 "volc-sdk-python/" + volcengine.VERSION（与 volcengine 原逻辑相同，VERSION 自带 v 前缀）
 签名     每次调用时读取 service_info.credentials 的 ak、sk、session_token、region，
          所以初始化之后再调用 set_ak/set_sk/set_session_token 也会生效
-发送     self.session.post(url, headers=..., data=body,
+Method   签名和发送都取 ApiInfo.method（五个 Action 均为 POST），只有这一个来源
+发送     self.session.request(method, url, headers=..., data=body,
                            timeout=(connection_timeout, socket_timeout), stream=stream,
                            allow_redirects=False)
 响应     带 Location 的 3xx：raise Exception，信息含状态码和 Location
@@ -185,9 +186,9 @@ Python 的 `int` 没有溢出问题，`Size` 不需要 Java 那样的 `Long` 兼
 ### `Download` 落盘
 
 1. 发请求前：`SaveTo` 为空白串时抛 `ValueError`。如果不拦，`os.path.realpath("")` 会返回当前目录，整个文件下载完后才在替换时报 `IsADirectoryError`。同样在发请求前 `stat(realpath(SaveTo))`：不存在则继续；是目录抛 `IsADirectoryError`；不是普通文件（设备、FIFO、socket）抛 `ValueError`。原子替换会把设备节点本身换成普通文件，例如容器里以 root 传 `/dev/null`；不为这类目标回退到直接写入，那样会多一条写入路径，FIFO 还会阻塞下载连接。
-2. 用 `with self.session.post(..., stream=True) as resp:` 包住整个处理过程，非 200 或中途异常时都会释放连接。
+2. 用 `with self._send(..., stream=True) as resp:` 包住整个处理过程，非 200 或中途异常时都会释放连接。
 3. 响应非 200：读取响应体作为错误信息抛出，不创建任何文件。
-4. 用 `os.path.realpath(SaveTo)` 得到最终目标，这样 `SaveTo` 是符号链接时，替换的是它指向的文件，与原先 `open(SaveTo, "wb")` 的效果一致。目标的父目录不存在时自动创建（与 Java 一致）。
+4. 用 `os.path.realpath(SaveTo)` 得到最终目标，这样 `SaveTo` 是符号链接时，替换的是它指向的文件，与原先 `open(SaveTo, "wb")` 的效果一致。父目录不存在时不自动创建，创建临时文件时抛 `FileNotFoundError`，与旧版一致；自动建目录不属于"对齐 UP"的范围，路径写错时还会悄悄建出一串目录。
 5. 在目标同一目录下用 `open(tmp, "xb", opener=...)` 创建随机名的临时文件。目标不存在时以 0o666 创建，权限按进程 umask 生成，与普通 `open()` 相同（不用 `mkstemp`，它固定创建 0600）；目标已存在时以 0o600 创建，直到第 8 步复制原权限之前都不对其他用户可读，否则覆盖 0600 私有文件时，下载期间以及进程被杀后残留的临时文件都会是 0644。创建放在 `try` 之外：极端情况下随机名撞上已有文件时，不会误删别人的文件。
 6. 用 `resp.iter_content` 按块写入临时文件并累计字节数。
 7. 长度核对：响应带 `Content-Length` 且没有 `Content-Encoding` 时，写入字节数必须等于 `Content-Length`，否则抛异常。不能只依赖 urllib3：本仓库 lock 的是 2.6.3，它默认校验长度；但 requests 允许用户装 urllib3 1.26，1.26 默认不校验，短读会被当成正常结束，残缺文件随后被原子替换上去，"失败不破坏旧文件"就失效了。UP 未加密时总会声明 `Content-Length`（压缩时为压缩后的大小），加密输出不声明，此时跳过核对。
@@ -223,7 +224,7 @@ Python 的 `int` 没有溢出问题，`Size` 不需要 Java 那样的 `Long` 兼
 默认测试全部离线运行，放在 `libs/api/tests/`：
 
 1. **服务端签名样例（主验收）**：复制 Java SDK 的 `up-signature-vectors.json` 到 `libs/api/tests/data/up_signature_vectors.json`。这份样例由 UP 服务端验签用的签名库离线生成，覆盖文本与非法 UTF-8 二进制请求体、根路径与 `/up/` 路径、含 `/`、空格、`+`、`=`、`&`、`!'()*`、中文的 query 值、大小写混合的参数名排序。逐条断言 canonical request、待签串、签名完全一致。另补一条：原始 URL 的 query 和 path 中都有字面 `+` 时的解码结果。
-2. **签名器边界**：`X-Content-Sha256` 用不同大小写的键都能找到、首尾空白被去掉、缺失或空白时报错；不修改入参 headers。
+2. **签名器边界**：只返回 `X-Date`、`Authorization`（及 STS 时的 `X-Security-Token`）；SignedHeaders 固定，不同 host 签名相同。
 3. **凭证**：`ak`、`session_token` 含 `\n`、`\r`、控制字符、空格或非 ASCII 字符时抛 `ValueError`，异常信息里**不包含**凭证值，`__cause__` 和 `__context__` 都为空；`session_token` 带尾随换行时去掉后正常签名；只配 AK 或只配 SK 时抛 `ValueError` 且没有发请求；AK、SK 都未配置时发出的请求不带 `X-Date`、`Authorization`。
 4. **签的就是发出去的请求**：给 `UpService.session` 挂一个 requests 的 fake adapter，截下五个方法实际发出的 `PreparedRequest`，按**收到的** method、URL、`X-Content-Sha256` 用已被样例验证的签名器重算签名，必须等于收到的 `Authorization`；并校验 `X-Content-Sha256` 等于实际请求体的 SHA-256。初始化后调用 `set_ak`/`set_sk` 会用新凭证签名。
 5. **请求形状**：方法均为 `POST`；`UploadRaw` 的 query 不含 `Sha256`、`ContentType`，`ImageCompress=False` 写成 `false` 照发，`None` 字段不发；`LongLive` 的键是 `ID`；`Download` 的 `Key` 等参数在 query、请求体为空、任何地方都没有 `SaveTo`；大写 sha256 发出时为小写且调用方模型不变；productCode 已配置时发送、未配置时不发送、不在 SignedHeaders 中；`service_info.header` 里已有小写 `content-type` 等键时不产生重复 Header，且 `service_info.header` 本身不被修改；User-Agent 为 `volc-sdk-python/` + `volcengine.VERSION`；STS token 生效；签名不含 `host`。
@@ -237,7 +238,7 @@ Python 的 `int` 没有溢出问题，`Size` 不需要 Java 那样的 `Long` 兼
    - `LongLive` 的 `ID` 为空串时不发请求；`LongLiveRequest(Id=...)` 序列化后的键是 `ID`；
    - 响应缺 `Result` 时五个方法都抛含 `no Result in response` 的异常；新响应字段能解析，缺失时为 `None`。
 7. **下载落盘**：
-   - 内容正确，自动创建父目录；
+   - 内容正确；父目录不存在时抛 `FileNotFoundError`，不创建目录；
    - `SaveTo` 为空白串时抛 `ValueError`，没有发请求；
    - 非 200 时不创建文件，连接被释放；
    - 中途中断，用 fake adapter 构造两种情况：响应体比声明的 `Content-Length` 短（SDK 自己的长度核对会报错，不依赖 urllib3 版本），以及响应流读到一半抛异常。两种情况下旧文件内容都不变，目录里也不残留临时文件；

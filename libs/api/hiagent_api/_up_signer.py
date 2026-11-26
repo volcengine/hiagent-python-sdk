@@ -24,7 +24,7 @@ import hashlib
 import hmac
 import re
 from datetime import datetime, timezone
-from typing import Dict, List, Mapping, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from urllib.parse import quote, unquote, unquote_plus, urlsplit
 
 SERVICE = "up"
@@ -44,7 +44,7 @@ _HEADER_SAFE = re.compile(r"[\x21-\x7e]+")
 def sign(
     method: str,
     url: str,
-    headers: Mapping[str, str],
+    payload_hash: str,
     *,
     ak: Optional[str],
     sk: Optional[str],
@@ -52,14 +52,14 @@ def sign(
     session_token: Optional[str] = None,
     now: Optional[datetime] = None,
 ) -> Dict[str, str]:
-    """Return a copy of ``headers`` plus ``X-Date``, ``Authorization`` and,
-    for STS credentials, ``X-Security-Token``.
+    """Return the headers to add to the request: ``X-Date``, ``Authorization``
+    and, for STS credentials, ``X-Security-Token``.
 
-    Raises ValueError when the credentials are unusable or the request has no
-    ``X-Content-Sha256``. Error messages never contain credential values.
+    ``payload_hash`` must be the value sent as ``X-Content-Sha256``. Raises
+    ValueError when the credentials are unusable; error messages never contain
+    credential values.
     """
     ak, sk, token = check_credentials(ak, sk, session_token)
-    payload_hash = _content_sha256(headers)
     signed_at = (now or datetime.now(timezone.utc)).astimezone(timezone.utc)
     x_date = signed_at.strftime(_X_DATE_FORMAT)
     short_date = x_date[:_SHORT_DATE_LENGTH]
@@ -71,12 +71,13 @@ def sign(
         hashlib.sha256,
     ).hexdigest()
 
-    signed = dict(headers)
-    signed[HEADER_DATE] = x_date
-    signed[HEADER_AUTHORIZATION] = (
-        f"{_ALGORITHM} Credential={ak}/{_credential_scope(short_date, region)}, "
-        f"SignedHeaders={_SIGNED_HEADERS}, Signature={signature}"
-    )
+    signed = {
+        HEADER_DATE: x_date,
+        HEADER_AUTHORIZATION: (
+            f"{_ALGORITHM} Credential={ak}/{_credential_scope(short_date, region)}, "
+            f"SignedHeaders={_SIGNED_HEADERS}, Signature={signature}"
+        ),
+    }
     if token:
         signed[HEADER_SECURITY_TOKEN] = token
     return signed
@@ -148,13 +149,6 @@ def check_credentials(
             "session token contains characters not allowed in an HTTP header"
         )
     return ak, sk, token
-
-
-def _content_sha256(headers: Mapping[str, str]) -> str:
-    for name, value in headers.items():
-        if name.lower() == HEADER_CONTENT_SHA256.lower() and value and value.strip():
-            return value.strip()
-    raise ValueError(f"{HEADER_CONTENT_SHA256} must be set before signing")
 
 
 def _credential_scope(short_date: str, region: str) -> str:

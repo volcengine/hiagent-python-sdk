@@ -113,7 +113,7 @@ def assert_signed_as_sent(sent: Sent, ak: str = AK, sk: str = SK, token: Optiona
     expected = _up_signer.sign(
         sent.method,
         sent.url,
-        {"X-Content-Sha256": sent.headers["X-Content-Sha256"]},
+        sent.headers["X-Content-Sha256"],
         ak=ak,
         sk=sk,
         region="cn-north-1",

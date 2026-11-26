@@ -1,7 +1,7 @@
 ## 1. 签名器
 
 - [x] 1.1 复制 Java SDK 的 `up-signature-vectors.json` 到 `libs/api/tests/data/up_signature_vectors.json`，先写样例测试并确认失败。
-- [x] 1.2 先写签名器边界测试：`X-Content-Sha256` 大小写不敏感查找、去空白、缺失报错；query 中字面 `+` 解为空格、path 中字面 `+` 保留；不修改入参 headers。
+- [x] 1.2 先写签名器边界测试：query 中字面 `+` 解为空格、path 中字面 `+` 保留；只返回签名相关 Header，不签 host。
 - [x] 1.3 先写凭证校验测试：`ak`/`session_token` 含 `\n`、`\r`、控制字符、空格、非 ASCII 时抛 `ValueError`，异常信息不含凭证值，`__cause__`/`__context__` 为空；`session_token` 尾随换行被去掉。
 - [x] 1.4 新增 `libs/api/hiagent_api/_up_signer.py`：凭证校验、query 规范化与编码（`unquote_plus` / `quote(safe="-_.~")`）、path 解码（`unquote`）、canonical request、待签串、派生密钥、`sign()`。
 - [x] 1.5 1.1–1.3 全部通过。
@@ -37,6 +37,7 @@
   - 符号链接、已有文件的权限位保留。
 - [x] 4.2 实现：`with` 包住流式响应，临时文件、长度核对、`copymode`、`os.replace`；做两项变异验证：改成直接写目标文件时中断用例必须失败，去掉长度核对时短响应用例必须失败。
 - [x] 4.3 自审补充（先写测试，再实现）：AK 尾随换行用 `fullmatch` 拦截；只配 STS token 时报错；不跟随重定向，3xx 和空响应体错误带状态码；`SaveTo` 为目录或非普通文件时发请求前报错；覆盖已有文件时临时文件以 0600 创建。变异验证：临时文件改回 0o666 时 0600 用例失败。
+- [x] 4.4 简化（先改测试，再实现）：`sign()` 直接接收 payload hash、只返回签名 Header；签名与发送的 method 都取自 `ApiInfo`；去掉自动创建父目录，父目录不存在时抛 `FileNotFoundError`。
 
 ## 5. 调用方、示例与文档
 

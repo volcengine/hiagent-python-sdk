@@ -215,16 +215,18 @@ class UpService(Service):
         credentials = self._credentials()
         if credentials is not None:
             ak, sk, token = credentials
-            headers = _up_signer.sign(
-                "POST",
+            signing_headers = _up_signer.sign(
+                api_info.method,
                 url,
-                headers,
+                content_sha256,
                 ak=ak,
                 sk=sk,
                 region=self.service_info.credentials.region,
                 session_token=token,
             )
-        return self.session.post(
+            headers.update(signing_headers)
+        return self.session.request(
+            api_info.method,
             url,
             headers=headers,
             data=body,
@@ -239,8 +241,8 @@ class UpService(Service):
         )
 
     def _credentials(self) -> Optional[Tuple[str, str, str]]:
-        """None when neither AK nor SK is configured (send unsigned); raises
-        ValueError for half-configured or malformed credentials."""
+        """None when no AK, SK or STS token is configured (send unsigned);
+        raises ValueError for half-configured or malformed credentials."""
         credentials = self.service_info.credentials
         if (
             _is_blank(credentials.ak)
@@ -339,7 +341,6 @@ def _download_target(save_to: str) -> str:
 
 def _save_atomically(resp: requests.Response, target: str) -> None:
     directory = os.path.dirname(target)
-    os.makedirs(directory, exist_ok=True)
     temp = os.path.join(directory, f".{os.path.basename(target)}.{uuid.uuid4().hex}.part")
     exists = os.path.exists(target)
     # Overwriting: stay private until the old mode is copied over, so a 0600
