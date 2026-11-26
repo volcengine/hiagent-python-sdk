@@ -17,7 +17,6 @@ import os
 import uuid
 
 from dotenv import load_dotenv
-
 from hiagent_api.up import UpService
 from hiagent_api.up_types import UploadRawRequest
 
@@ -30,10 +29,11 @@ if __name__ == '__main__':
     test_file = os.path.join(os.path.dirname(
         os.path.abspath(__file__)), "test_data/test.txt")
     test_file_hash = hashlib.sha256(open(test_file, 'rb').read()).hexdigest()
+    # Sha256 可以省略，SDK 会先流式计算一遍；ContentType 建议填文件的真实类型
     req_params = UploadRawRequest(Id=uuid.uuid4().hex,
-                                  ContentType="plain/text",
+                                  ContentType="text/plain",
                                   Expire="15h",
-                                  Sha256=test_file_hash)
+                                  Filename="test.txt")
     with open(test_file, "rb") as f:
         resp = up.UploadRaw(req_params, file=f)
         assert resp.Sha256 == test_file_hash, "SHA256 mismatch"

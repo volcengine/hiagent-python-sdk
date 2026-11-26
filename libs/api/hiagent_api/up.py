@@ -12,21 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import contextlib
+import hashlib
 import json
-from typing import BinaryIO
+import os
+import shutil
+import uuid
+from typing import Any, BinaryIO, Dict, Optional, Tuple
 from urllib.parse import urlparse
 
+import requests
+from requests.structures import CaseInsensitiveDict
+from volcengine import VERSION as VOLC_SDK_VERSION
 from volcengine.ApiInfo import ApiInfo
-from volcengine.auth.SignerV4 import SignerV4
 from volcengine.base.Service import Service
 from volcengine.Credentials import Credentials
 from volcengine.ServiceInfo import ServiceInfo
 
-from hiagent_api import up_types
+from hiagent_api import _up_signer, up_types
 from hiagent_api.product_code import PRODUCT_CODE_HEADER, normalize_product_code
+
+_API_VERSION = "2022-01-01"
+_JSON = "application/json"
+_OCTET_STREAM = "application/octet-stream"
+_EMPTY_SHA256 = hashlib.sha256(b"").hexdigest()
+_CHUNK_SIZE = 64 * 1024
 
 
 class UpService(Service):
+    """Client for the UP (upload) service.
+
+    Every request is a POST signed in headers by ``_up_signer`` from the exact
+    method, URL and ``X-Content-Sha256`` that go on the wire. Without any
+    AK/SK configured, requests are sent unsigned and the UP deployment decides
+    whether to serve them.
+    """
+
     def __init__(self, endpoint="https://open.volcengineapi.com", region="cn-north-1"):
         self.service_info = UpService.get_service_info(endpoint, region)
         self.api_info = UpService.get_api_info()
@@ -65,202 +86,255 @@ class UpService(Service):
 
     @staticmethod
     def get_api_info():
-        api_info = {
-            "UploadRaw": ApiInfo(
-                "POST", "/up", {"Action": "UploadRaw", "Version": "2022-01-01"}, {}, {}
-            ),
-            "LongLive": ApiInfo(
-                "POST", "/up", {"Action": "LongLive", "Version": "2022-01-01"}, {}, {}
-            ),
-            "DownloadKey": ApiInfo(
-                "POST",
-                "/up",
-                {"Action": "DownloadKey", "Version": "2022-01-01"},
-                {},
-                {},
-            ),
-            "Download": ApiInfo(
-                "POST", "/down", {"Action": "Download", "Version": "2022-01-01"}, {}, {}
-            ),
-            "Delete": ApiInfo(
-                "POST", "/up", {"Action": "Delete", "Version": "2022-01-01"}, {}, {}
-            ),
+        def api(path: str, action: str) -> ApiInfo:
+            return ApiInfo("POST", path, {"Action": action, "Version": _API_VERSION}, {}, {})
+
+        return {
+            "UploadRaw": api("/up", "UploadRaw"),
+            "LongLive": api("/up", "LongLive"),
+            "DownloadKey": api("/up", "DownloadKey"),
+            "Download": api("/down", "Download"),
+            "Delete": api("/up", "Delete"),
         }
-        return api_info
 
     def UploadRaw(
         self, params: up_types.UploadRawRequest, file: BinaryIO
     ) -> up_types.UploadRawResponse:
-        """不分片的上传接口
+        """不分片上传文件，UP 会同时完成长期化。
 
         Args:
-            params (Dict):
-
-                `File (BinaryIO)`: 必选, 文件流
-                `Id (str)`: 必选, 文件 ID
-                `ContentType (str)`: 可选, 文件类型
-                `Expire (str)`: 可选, 文件过期时间，格式为 15h
+            params: `Id` 必填；`Sha256` 不传或为空白时 SDK 先从文件当前位置流式
+                计算一遍（此时文件对象必须可 seek）；`ContentType` 不传时按
+                application/octet-stream 上传；`Expire`、`Filename`、`ImageCompress` 可选。
+            file: 文件对象，从当前位置读到末尾，流式发送。
 
         Returns:
-            Dict:
-
-                `Path (str)`: 文件路径
-                    示例值: path/to/file
-
-                `Sha256 (str)`: 文件的哈希值
-                    示例值: xxxx
-
-                `Size (int)`: 文件的大小，单位为字节
-                    示例值: 1024
-
+            UploadRawResponse: `Path`、`Sha256`、`Size`、`ShortLink`、`PresignKey`。
         """
-        api = "UploadRaw"
-        if api not in self.api_info:
-            raise Exception("no such api")
-        api_info = self.api_info[api]
-        r = self.prepare_request(api_info, params.model_dump())
-        if params.ContentType != "":
-            r.headers["Content-Type"] = params.ContentType
-        else:
-            r.headers["Content-Type"] = "application/octet-stream"
-        r.headers["X-Content-Sha256"] = params.Sha256
-        SignerV4.sign_url(r, self.service_info.credentials)
-
-        url = r.build()
-
-        resp = self.session.post(
-            url,
-            headers=r.headers,
-            data=file,
-            timeout=(
-                self.service_info.connection_timeout,
-                self.service_info.socket_timeout,
-            ),
-        )
-        if resp.status_code == 200:
-            res_json = json.loads(resp.text)
-            if "Result" not in res_json.keys():
-                Exception(f"no Result in response: {resp.text}")
-            return up_types.UploadRawResponse.model_validate(res_json["Result"])
-        else:
-            raise Exception(resp.text)
+        _require(params.Id, "UploadRawRequest.Id")
+        self._credentials()
+        content_sha256 = _normalize_sha256(params.Sha256) or _sha256_from_here(file)
+        query = {
+            "Expire": params.Expire,
+            "Id": params.Id,
+            "Filename": params.Filename,
+            "ImageCompress": params.ImageCompress,
+        }
+        content_type = params.ContentType or _OCTET_STREAM
+        resp = self._send("UploadRaw", query, file, content_type, content_sha256)
+        return up_types.UploadRawResponse.model_validate(_result(resp))
 
     def LongLive(self, params: up_types.LongLiveRequest) -> up_types.LongLiveResponse:
         """将某个文件转换成长效存储的文件。
 
         Args:
-            params (Dict):
-
-                `Path (str)`: 文件路径
-                    示例值: path/to/file
-
-                `Id (str)`: 必选, 文件 ID
+            params: `Path`、`Id` 必填（请求体中以 `ID` 发送），`Filename` 可选。
 
         Returns:
-            Dict:
-
-                `Path (str)`: 文件路径
-                    示例值: path/to/file
-
-                `Size (int)`: 文件的大小，单位为字节
-                    示例值: 1024
-
+            LongLiveResponse: `Path`、`Size`、`Sha256`、`ShortLink`。
         """
-        return up_types.LongLiveResponse.model_validate(
-            self.__request("LongLive", params.model_dump())
-        )
+        _require(params.Id, "LongLiveRequest.ID")
+        resp = self._send_json("LongLive", params.model_dump(by_alias=True, exclude_none=True))
+        return up_types.LongLiveResponse.model_validate(_result(resp))
 
     def DownloadKey(
         self, params: up_types.DownloadKeyRequest
     ) -> up_types.DownloadKeyResponse:
-        """将某个文件转换成长效存储的文件。
+        """获取下载文件用的 Key。
 
         Args:
-            params (Dict):
-
-                `Path (str)`: 文件路径
-                    示例值: path/to/file
+            params: `Path` 与 `Sha256` 二选一。
 
         Returns:
-            Dict:
-
-                `Key (str)`: 文件下载时可用的 key
-                    示例值: xxxx
-
+            DownloadKeyResponse: `Key`、`Size`、`ContentType`。
         """
-        api = "DownloadKey"
-        res = self.get(api, params.model_dump(), dict())
-        if res == "":
-            raise Exception("empty response")
-        res_json = json.loads(res)
-        if "Result" not in res_json.keys():
-            Exception(f"no Result in response: {res}")
-        return up_types.DownloadKeyResponse.model_validate(res_json["Result"])
+        query = {"Path": params.Path, "Sha256": _normalize_sha256(params.Sha256)}
+        resp = self._send("DownloadKey", query, b"", _JSON, _EMPTY_SHA256)
+        return up_types.DownloadKeyResponse.model_validate(_result(resp))
 
-    def Download(self, params: up_types.DownloadRequest) -> up_types.DownloadResponse:
-        """下载某个文件
+    def Download(self, params: up_types.DownloadRequest) -> None:
+        """下载文件到 `SaveTo`。
+
+        先写入同目录下的临时文件，完整收到后再原子替换目标；失败时不留下临时
+        文件，也不改动已有的目标文件。参数都放在 query 中（`SaveTo` 除外），
+        与 UP 按 query 中的 `Key` 放行下载的方式一致。
 
         Args:
-            params (Dict):
-
-                `Path (str)`: 文件路径
-                    示例值: path/to/file
-
-                `Key (str)`: 文件下载时可用的 key
-                    示例值: xxxx
-
-                `SaveTo (str)`: 文件保存路径`
-        Returns:
-            Dict:
+            params: `Key`、`SaveTo` 必填；`Path` 与 `Sha256` 二选一；
+                `ID`、`Filename`、`ImageCompress` 可选。
         """
-        api = "Download"
-        if api not in self.api_info:
-            raise Exception("no such api")
-        api_info = self.api_info[api]
+        if not params.SaveTo or not params.SaveTo.strip():
+            raise ValueError("DownloadRequest.SaveTo must be set")
+        query = {
+            "Key": params.Key,
+            "Path": params.Path,
+            "Sha256": _normalize_sha256(params.Sha256),
+            "ID": params.ID,
+            "Filename": params.Filename,
+            "ImageCompress": params.ImageCompress,
+        }
+        with self._send("Download", query, b"", _JSON, _EMPTY_SHA256, stream=True) as resp:
+            if resp.status_code != 200:
+                raise Exception(resp.text)
+            _save_atomically(resp, params.SaveTo)
 
-        r = self.prepare_request(api_info, params.model_dump(), 0)
+    def Delete(self, params: up_types.DeleteRequest) -> Dict[str, Any]:
+        """删除文件的一条关联；关联全部删除后文件在下次回收时删除。
 
-        SignerV4.sign(r, self.service_info.credentials)
+        Args:
+            params: `Id`、`Sha256` 必填。
 
-        url = r.build(0)
-        resp = self.session.get(
+        Returns:
+            UP 返回的 `Result`（成功时为空 dict）。
+        """
+        body = params.model_dump(by_alias=True, exclude_none=True)
+        body["Sha256"] = _normalize_sha256(body.get("Sha256"))
+        return _result(self._send_json("Delete", body))
+
+    def _send_json(self, action: str, body: Dict[str, Any]) -> requests.Response:
+        payload = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        return self._send(action, {}, payload, _JSON, hashlib.sha256(payload).hexdigest())
+
+    def _send(
+        self,
+        action: str,
+        query: Dict[str, Any],
+        body: Any,
+        content_type: str,
+        content_sha256: str,
+        stream: bool = False,
+    ) -> requests.Response:
+        api_info = self.api_info[action]
+        url = (
+            f"{self.service_info.scheme}://{self.service_info.host}{api_info.path}"
+            f"?{_encode_query({**api_info.query, **query})}"
+        )
+        headers = CaseInsensitiveDict(self.service_info.header)
+        headers["Content-Type"] = content_type
+        headers[_up_signer.HEADER_CONTENT_SHA256] = content_sha256
+        headers["User-Agent"] = f"volc-sdk-python/{VOLC_SDK_VERSION}"
+
+        credentials = self._credentials()
+        if credentials is not None:
+            ak, sk, token = credentials
+            headers = _up_signer.sign(
+                "POST",
+                url,
+                headers,
+                ak=ak,
+                sk=sk,
+                region=self.service_info.credentials.region,
+                session_token=token,
+            )
+        return self.session.post(
             url,
-            headers=r.headers,
+            headers=headers,
+            data=body,
             timeout=(
                 self.service_info.connection_timeout,
                 self.service_info.socket_timeout,
             ),
-            stream=True,
+            stream=stream,
         )
-        if resp.status_code == 200:
-            with open(params.SaveTo, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=1024):
-                    if chunk:
-                        f.write(chunk)
-        else:
-            raise Exception(resp.text)
 
-    def Delete(self, params: up_types.DeleteRequest) -> up_types.DeleteResponse:
-        """删除某个文件
+    def _credentials(self) -> Optional[Tuple[str, str, str]]:
+        """None when neither AK nor SK is configured (send unsigned); raises
+        ValueError for half-configured or malformed credentials."""
+        credentials = self.service_info.credentials
+        if _is_blank(credentials.ak) and _is_blank(credentials.sk):
+            return None
+        return _up_signer.check_credentials(
+            credentials.ak, credentials.sk, credentials.session_token
+        )
 
-        Args:
-            params (Dict):
 
-                `Id (str)`: 必选, 文件 ID
+def _encode_query(params: Dict[str, Any]) -> str:
+    pairs = []
+    for name, value in params.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            value = "true" if value else "false"
+        pairs.append(f"{_up_signer.sign_encode(name)}={_up_signer.sign_encode(str(value))}")
+    return "&".join(pairs)
 
-                `Sha256 (str)`: 文件的哈希值
-                    示例值: xxxx
 
-        Returns:
-            Dict:
-        """
-        return self.__request("Delete", params.model_dump())
+def _result(resp: requests.Response) -> Any:
+    if resp.status_code != 200:
+        raise Exception(resp.text)
+    data = resp.json()
+    if not isinstance(data, dict) or "Result" not in data:
+        raise Exception(f"no Result in response: {resp.text}")
+    return data["Result"]
 
-    def __request(self, action, params):
-        res = self.json(action, dict(), json.dumps(params))
-        if res == "":
-            raise Exception("empty response")
-        res_json = json.loads(res)
-        if "Result" not in res_json.keys():
-            return res_json
-        return res_json["Result"]
+
+def _require(value: Optional[str], name: str) -> None:
+    # Same test as UP's validate:"required": only None and "" are rejected.
+    if value is None or value == "":
+        raise ValueError(f"{name} must be set")
+
+
+def _is_blank(value: Optional[str]) -> bool:
+    return not value or not value.strip()
+
+
+def _normalize_sha256(value: Optional[str]) -> Optional[str]:
+    if _is_blank(value):
+        return None
+    return value.strip().lower()
+
+
+def _sha256_from_here(file: BinaryIO) -> str:
+    """Hash the file from its current position to the end, then seek back so
+    the upload sends exactly the hashed bytes."""
+    try:
+        seekable = file.seekable()
+    except Exception:
+        seekable = False
+    if not seekable:
+        raise ValueError(
+            "UploadRawRequest.Sha256 must be set when the file object cannot seek"
+        )
+    start = file.tell()
+    digest = hashlib.sha256()
+    for chunk in iter(lambda: file.read(_CHUNK_SIZE), b""):
+        digest.update(chunk)
+    file.seek(start)
+    return digest.hexdigest()
+
+
+def _save_atomically(resp: requests.Response, save_to: str) -> None:
+    # realpath: a symlinked SaveTo gets its target replaced, as open(SaveTo) did.
+    target = os.path.realpath(save_to)
+    directory = os.path.dirname(target)
+    os.makedirs(directory, exist_ok=True)
+    temp = os.path.join(directory, f".{os.path.basename(target)}.{uuid.uuid4().hex}.part")
+    # 0o666 & ~umask, like open(); mkstemp would force 0600.
+    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o666)
+    try:
+        written = 0
+        with os.fdopen(fd, "wb") as out:
+            for chunk in resp.iter_content(chunk_size=_CHUNK_SIZE):
+                out.write(chunk)
+                written += len(chunk)
+        _check_length(resp, written)
+        if os.path.exists(target):
+            # Keep the existing file's mode: a 0600 file must not become 0644.
+            shutil.copymode(target, temp)
+        os.replace(temp, target)
+    except BaseException:
+        with contextlib.suppress(FileNotFoundError):
+            os.remove(temp)
+        raise
+
+
+def _check_length(resp: requests.Response, written: int) -> None:
+    """urllib3 1.26 does not enforce Content-Length, so a short read would
+    otherwise be installed as a complete download."""
+    declared = resp.headers.get("Content-Length")
+    if declared is None or "Content-Encoding" in resp.headers:
+        return
+    if written != int(declared):
+        raise Exception(
+            f"download incomplete: received {written} bytes, Content-Length is {declared}"
+        )

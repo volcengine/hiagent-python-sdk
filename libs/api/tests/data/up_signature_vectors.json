@@ -1,0 +1,64 @@
+{
+  "_comment": "Generated offline by UP's own signature verifier (auth.Signing over the materials CheckSignature takes from the received request). Credentials are fixtures, not real.",
+  "accessKey": "AKLTFIXTUREONLY0000000000",
+  "secretKey": "fixture-secret-key-not-a-real-credential",
+  "region": "cn-north-1",
+  "service": "up",
+  "vectors": [
+    {
+      "name": "upload-raw-text-root-path",
+      "method": "POST",
+      "url": "http://127.0.0.1:31010/?Action=UploadRaw&Version=2023-08-01&Expire=15h&Id=0f3c2a9e",
+      "xDate": "20261106T080000Z",
+      "contentSha256": "28212f4b8184bdc7545fe2f7122040bc25bc2dea90533da0752762f07f159053",
+      "signedHeaders": "x-content-sha256;x-date",
+      "canonicalRequest": "POST\n/\nAction=UploadRaw&Expire=15h&Id=0f3c2a9e&Version=2023-08-01\nx-content-sha256:28212f4b8184bdc7545fe2f7122040bc25bc2dea90533da0752762f07f159053\nx-date:20261106T080000Z\n\nx-content-sha256;x-date\n28212f4b8184bdc7545fe2f7122040bc25bc2dea90533da0752762f07f159053",
+      "stringToSign": "HMAC-SHA256\n20261106T080000Z\n20261106/cn-north-1/up/request\n521e7b70960ac5214b7975c406ff241e14938c4ec1652c136e6bacc808d9222a",
+      "signature": "e967cad0298be59ff6d8e82e5491c06c8fcf25caa6682f4a563e27fbc05aa940"
+    },
+    {
+      "name": "upload-raw-binary-up-path",
+      "method": "POST",
+      "url": "http://127.0.0.1:31010/up/?Action=UploadRaw&Version=2023-08-01&Id=bin-01",
+      "xDate": "20261106T080000Z",
+      "contentSha256": "fba2286f9b2db5b8e06a47532f88d8b9f99bb60f9edb1e4c09d1bbf4843120ff",
+      "signedHeaders": "x-content-sha256;x-date",
+      "canonicalRequest": "POST\n/up/\nAction=UploadRaw&Id=bin-01&Version=2023-08-01\nx-content-sha256:fba2286f9b2db5b8e06a47532f88d8b9f99bb60f9edb1e4c09d1bbf4843120ff\nx-date:20261106T080000Z\n\nx-content-sha256;x-date\nfba2286f9b2db5b8e06a47532f88d8b9f99bb60f9edb1e4c09d1bbf4843120ff",
+      "stringToSign": "HMAC-SHA256\n20261106T080000Z\n20261106/cn-north-1/up/request\n8184503230976008c89c581c293dd79a5986e1d12b44bec15aa8cc6c1cbe5549",
+      "signature": "15e63e2ccadd7bf1d484add1de143ed5236151bcbcb0a33b819a3d4b8eaf6c76"
+    },
+    {
+      "name": "download-key-reserved-and-unicode-query",
+      "method": "POST",
+      "url": "http://127.0.0.1:31010/?Action=DownloadKey&Version=2023-08-01&path=temp%2F%E4%B8%AD%E6%96%87%20%E6%8A%A5%E5%91%8A%20a%2Bb%3Dc%26d%21%27%28%29%2A~.pdf&sha256=9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08",
+      "xDate": "20261106T080000Z",
+      "contentSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "signedHeaders": "x-content-sha256;x-date",
+      "canonicalRequest": "POST\n/\nAction=DownloadKey&Version=2023-08-01&path=temp%2F%E4%B8%AD%E6%96%87%20%E6%8A%A5%E5%91%8A%20a%2Bb%3Dc%26d%21%27%28%29%2A~.pdf&sha256=9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08\nx-content-sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\nx-date:20261106T080000Z\n\nx-content-sha256;x-date\ne3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stringToSign": "HMAC-SHA256\n20261106T080000Z\n20261106/cn-north-1/up/request\nac041df9300caf0ba331985d43e91b80c956c0e5c6ae2ecda40dfe7dd2adf4fe",
+      "signature": "ecc3b2d2895e896d7505b1d118d0039cbb79feb1fffd7180b023cbdc11df8c59"
+    },
+    {
+      "name": "long-live-json-body",
+      "method": "POST",
+      "url": "http://127.0.0.1:31010/?Action=LongLive&Version=2023-08-01",
+      "xDate": "20261106T080000Z",
+      "contentSha256": "eba0fe6ff54a0403d21fbb7fdccc8c08a380b53f59d96bb774ac0beecd573519",
+      "signedHeaders": "x-content-sha256;x-date",
+      "canonicalRequest": "POST\n/\nAction=LongLive&Version=2023-08-01\nx-content-sha256:eba0fe6ff54a0403d21fbb7fdccc8c08a380b53f59d96bb774ac0beecd573519\nx-date:20261106T080000Z\n\nx-content-sha256;x-date\neba0fe6ff54a0403d21fbb7fdccc8c08a380b53f59d96bb774ac0beecd573519",
+      "stringToSign": "HMAC-SHA256\n20261106T080000Z\n20261106/cn-north-1/up/request\nddf501d9c7e215cd8c9dd8723acaab78dda1cdf4ddd8ad6af2bb42d0a9dfbe62",
+      "signature": "e6b624b2d841aef6b99c2f4b289beda01667f36688f4fa5805862a0ca65ba703"
+    },
+    {
+      "name": "delete-https-domain-up-path",
+      "method": "POST",
+      "url": "https://up.example.com/up/?Action=Delete&Version=2023-08-01",
+      "xDate": "20261231T235959Z",
+      "contentSha256": "8415acfd048f0ba37e7187effee3d06295ed60c8a0d04355a6b16aefa120a333",
+      "signedHeaders": "x-content-sha256;x-date",
+      "canonicalRequest": "POST\n/up/\nAction=Delete&Version=2023-08-01\nx-content-sha256:8415acfd048f0ba37e7187effee3d06295ed60c8a0d04355a6b16aefa120a333\nx-date:20261231T235959Z\n\nx-content-sha256;x-date\n8415acfd048f0ba37e7187effee3d06295ed60c8a0d04355a6b16aefa120a333",
+      "stringToSign": "HMAC-SHA256\n20261231T235959Z\n20261231/cn-north-1/up/request\nb5df3da4514aecd03d492bf957b1ef2c1519ac82ef71099da0e086731faa2db4",
+      "signature": "0801a3cceaa46eff77f33ef71d218fc8480a9f5e0c1ebca0e74389cd55ac3845"
+    }
+  ]
+}
