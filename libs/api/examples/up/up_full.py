@@ -15,10 +15,10 @@
 import hashlib
 import os
 import uuid
-from dotenv import load_dotenv
 
-from hiagent_api.up import UpService
+from dotenv import load_dotenv
 from hiagent_api import up_types
+from hiagent_api.up import UpService
 
 load_dotenv()
 
@@ -37,7 +37,7 @@ if __name__ == '__main__':
         os.path.abspath(__file__)), "test_data/test.txt")
     test_file_hash = hashlib.sha256(open(test_file, 'rb').read()).hexdigest()
     req_params = up_types.UploadRawRequest(Id=uuid.uuid4().hex,
-                                           ContentType="plain/text",
+                                           ContentType="text/plain",
                                            Expire="15h",
                                            Sha256=test_file_hash)
     uploadraw_resp = {}
