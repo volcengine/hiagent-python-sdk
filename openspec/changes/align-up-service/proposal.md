@@ -73,7 +73,10 @@ UP 的 `CheckSignature` 只从请求头取 `X-Date` 和 `Authorization`，用自
   - 调用方传入大写 sha256 时，SDK 发出小写；`UploadRawRequest.Sha256` 为空白串时改为自动计算，不再原样发送空值。
   - `UploadRaw` 缺 `Id`、`LongLive` 缺 `ID`、`Download` 的 `SaveTo` 为空白时，本地抛 `ValueError`，不再发请求。
   - `UploadRaw` 未提供 `Sha256` 且文件对象不可 seek 时，本地抛 `ValueError`。
-  - 只配置了 AK、SK 其中之一，或 AK、STS token 含控制字符、空格或非 ASCII 字符时，本地抛 `ValueError`。
+  - 只配置了 AK、SK 其中之一或只配置了 STS token，或 AK、STS token 含控制字符、空格或非 ASCII 字符时，本地抛 `ValueError`。
+  - 不再跟随 HTTP 重定向：收到 3xx 时抛出含状态码和 `Location` 的异常。网关对同一主机做 http→https 重定向的部署，需要把 endpoint 改成 https。
+  - 非 200 且响应体为空时，异常信息改为包含状态码（原先为空串）。
+  - `Download` 的 `SaveTo` 为目录或非普通文件（如 `/dev/null`、FIFO）时，发请求前抛异常；原先目录要下载完才报错，`/dev/null` 可用来丢弃下载内容。
   - 未配置凭证时请求不再带空凭证签名，而是完全不签名。
   - `Delete` 收到不含 `Result` 的 200 响应时改为抛 `Exception`（原先返回整个响应 JSON）。UP 的 `Delete` 成功时总是返回 `"Result": {}`，只影响 mock 或非 UP 实现。
   - `Download` 成功后 `SaveTo` 是一个新文件（经原子替换）：`SaveTo` 为符号链接时替换的是链接指向的文件；目标已存在时保留其权限位。

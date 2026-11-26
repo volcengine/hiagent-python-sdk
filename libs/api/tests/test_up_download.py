@@ -1,6 +1,7 @@
 import io
 import os
 import stat
+import sys
 
 import pytest
 from hiagent_api import up_types
@@ -151,3 +152,64 @@ def test_new_file_mode_follows_umask_like_open(tmp_path):
     target = tmp_path / "new.bin"
     _download(service, target)
     assert stat.S_IMODE(target.stat().st_mode) == stat.S_IMODE(reference.stat().st_mode)
+
+
+def test_directory_save_to_fails_before_sending(tmp_path):
+    service, adapter = make_service(_serve())
+    with pytest.raises(IsADirectoryError):
+        _download(service, tmp_path)
+    assert adapter.sent == []
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="needs mkfifo")
+def test_non_regular_save_to_fails_before_sending(tmp_path):
+    fifo = tmp_path / "pipe"
+    os.mkfifo(fifo)
+    service, adapter = make_service(_serve())
+    with pytest.raises(ValueError, match="regular file"):
+        _download(service, fifo)
+    assert adapter.sent == []
+    assert stat.S_ISFIFO(os.lstat(fifo).st_mode)
+
+
+def test_redirect_is_not_followed_and_creates_no_file(tmp_path):
+    location = "https://elsewhere.example.com/down"
+    service, adapter = make_service(
+        _serve(body=b"", status=302, headers={"Location": location})
+    )
+    with pytest.raises(Exception, match="302"):
+        _download(service, tmp_path / "f")
+    assert len(adapter.sent) == 1
+    assert _listing(tmp_path) == []
+
+
+class _ModeProbe(io.RawIOBase):
+    """Records the modes of partial files present while the body is read."""
+
+    def __init__(self, directory, body):
+        self.directory = directory
+        self.body = body
+        self.modes = []
+
+    def readable(self):
+        return True
+
+    def read(self, size=-1):
+        for name in os.listdir(self.directory):
+            if name.endswith(".part"):
+                self.modes.append(stat.S_IMODE(os.stat(self.directory / name).st_mode))
+        body, self.body = self.body, b""
+        return body
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="POSIX modes")
+def test_partial_file_is_private_while_overwriting_private_file(tmp_path):
+    target = tmp_path / "private.bin"
+    target.write_bytes(OLD)
+    target.chmod(0o600)
+    probe = _ModeProbe(tmp_path, CONTENT)
+    service, _ = make_service(_serve(raw=probe))
+    _download(service, target)
+    assert probe.modes and set(probe.modes) == {0o600}
+    assert stat.S_IMODE(target.stat().st_mode) == 0o600
+    assert target.read_bytes() == CONTENT

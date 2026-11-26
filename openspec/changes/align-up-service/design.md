@@ -79,7 +79,7 @@ def sign(method: str, url: str, headers: Mapping[str, str], *, ak: str, sk: str,
 `requests` 设置含 `\r`、`\n` 或首部空白的 Header 时抛出的 `InvalidHeader` 会把整个 Header 值写进异常信息。会进入 Header 的凭证只有 AK（写进 `Authorization`）和 STS token（`X-Security-Token`）；其中真正的秘密是 STS token，常见出错方式是从文件读入时带了尾随换行。所以只做两件事：
 
 - `session_token` 先去首尾空白，去完为空则视为没有 STS。
-- `ak`、`session_token` 只能包含可打印 ASCII（`0x21`–`0x7e`），否则抛 `ValueError`。异常信息只说明是哪一项不合法，不包含值，并用 `from None` 断开原始异常。
+- `ak`、`session_token` 只能包含可打印 ASCII（`0x21`–`0x7e`），否则抛 `ValueError`。用 `re.fullmatch` 判断：`re.match` 加 `$` 时 `$` 会匹配末尾 `\n` 之前的位置，不 strip 的 AK 带尾随换行就会漏过检查。异常信息只说明是哪一项不合法，不包含值，并用 `from None` 断开原始异常。
 
 不另做的校验：SK 不进入任何 Header，只参与 HMAC；region 来自构造参数，不是凭据，写错只会导致服务端验签失败。AK、SK 是否为空由下一节的规则处理。
 
@@ -95,8 +95,8 @@ def sign(method: str, url: str, headers: Mapping[str, str], *, ak: str, sk: str,
 
 所以：
 
-- AK、SK 都为空（`None` 或空白串）：不调用签名器，请求不带 `X-Date`、`Authorization`，其余部分（含 `X-Content-Sha256`）照常发送。UP 的 `claimsAnIdentity` 会把它当作完全未签名的请求，交给部署配置决定是否放行。
-- 只配置了其中一个：在发请求前抛 `ValueError`，避免半套配置被静默降级成匿名请求。
+- AK、SK、STS token 都为空（`None` 或空白串）：不调用签名器，请求不带 `X-Date`、`Authorization`，其余部分（含 `X-Content-Sha256`）照常发送。UP 的 `claimsAnIdentity` 会把它当作完全未签名的请求，交给部署配置决定是否放行。
+- 配置了其中一部分但 AK、SK 不全（包括只配了 STS token）：在发请求前抛 `ValueError`，避免半套配置被静默降级成匿名请求。
 - 两个都配置了：按上文签名，并做凭证校验。
 
 ### `UpService` 的请求构造
@@ -115,14 +115,17 @@ Headers  CaseInsensitiveDict(service_info.header)（Accept、已配置的 X-Trac
 签名     每次调用时读取 service_info.credentials 的 ak、sk、session_token、region，
          所以初始化之后再调用 set_ak/set_sk/set_session_token 也会生效
 发送     self.session.post(url, headers=..., data=body,
-                           timeout=(connection_timeout, socket_timeout), stream=stream)
-响应     非 200：raise Exception(resp.text)，与现在一致
+                           timeout=(connection_timeout, socket_timeout), stream=stream,
+                           allow_redirects=False)
+响应     带 Location 的 3xx：raise Exception，信息含状态码和 Location
+         其他非 200：raise Exception(resp.text)，与现在一致；响应体为空时改为带状态码
          200：解析 JSON；没有 Result 时 raise Exception("no Result in response: ...")
 ```
 
 - `UpService` 继续继承 volcengine `Service`，`set_ak`、`set_sk`、`set_session_token`、`session`、`set_product_code` 全部照旧可用。`get_api_info()` 的五个 `ApiInfo` 原本就是 `POST`，保持不变，`_send` 从中读取 path 与 `Action`/`Version`。
 - 路径保持现在的 `/up`（`Download` 为 `/down`），endpoint 解析逻辑不变。
 - 不再使用 `Service.get/json/prepare_request` 与 `SignerV4`，避免再次出现"签一份、发一份"。
+- 不跟随重定向。签名只覆盖 path 和 query，跟随后要么带着旧签名请求新 URL（301/302 还会把 POST 改成 GET 并丢掉请求体），要么跨主机时 `requests` 只去掉 `Authorization`、照样带上 `X-Security-Token`。UP 的五个接口本身不返回 3xx，收到 3xx 说明 endpoint 配错或中间有网关，直接报错并给出 `Location` 更容易排查。代价：网关对同一主机做 http→https 的 307/308 时，原先能成功，现在要把 endpoint 改成 https。
 
 ### 各方法的请求形状
 
@@ -181,11 +184,11 @@ Python 的 `int` 没有溢出问题，`Size` 不需要 Java 那样的 `Long` 兼
 
 ### `Download` 落盘
 
-1. 发请求前：`SaveTo` 为空白串时抛 `ValueError`。如果不拦，`os.path.realpath("")` 会返回当前目录，整个文件下载完后才在替换时报 `IsADirectoryError`。
+1. 发请求前：`SaveTo` 为空白串时抛 `ValueError`。如果不拦，`os.path.realpath("")` 会返回当前目录，整个文件下载完后才在替换时报 `IsADirectoryError`。同样在发请求前 `stat(realpath(SaveTo))`：不存在则继续；是目录抛 `IsADirectoryError`；不是普通文件（设备、FIFO、socket）抛 `ValueError`。原子替换会把设备节点本身换成普通文件，例如容器里以 root 传 `/dev/null`；不为这类目标回退到直接写入，那样会多一条写入路径，FIFO 还会阻塞下载连接。
 2. 用 `with self.session.post(..., stream=True) as resp:` 包住整个处理过程，非 200 或中途异常时都会释放连接。
 3. 响应非 200：读取响应体作为错误信息抛出，不创建任何文件。
 4. 用 `os.path.realpath(SaveTo)` 得到最终目标，这样 `SaveTo` 是符号链接时，替换的是它指向的文件，与原先 `open(SaveTo, "wb")` 的效果一致。目标的父目录不存在时自动创建（与 Java 一致）。
-5. 在目标同一目录下用 `os.open(tmp, O_WRONLY | O_CREAT | O_EXCL, 0o666)` 创建随机名的临时文件。权限按进程 umask 生成，与普通 `open()` 相同；不用 `mkstemp`，因为它固定创建 0600。
+5. 在目标同一目录下用 `open(tmp, "xb", opener=...)` 创建随机名的临时文件。目标不存在时以 0o666 创建，权限按进程 umask 生成，与普通 `open()` 相同（不用 `mkstemp`，它固定创建 0600）；目标已存在时以 0o600 创建，直到第 8 步复制原权限之前都不对其他用户可读，否则覆盖 0600 私有文件时，下载期间以及进程被杀后残留的临时文件都会是 0644。创建放在 `try` 之外：极端情况下随机名撞上已有文件时，不会误删别人的文件。
 6. 用 `resp.iter_content` 按块写入临时文件并累计字节数。
 7. 长度核对：响应带 `Content-Length` 且没有 `Content-Encoding` 时，写入字节数必须等于 `Content-Length`，否则抛异常。不能只依赖 urllib3：本仓库 lock 的是 2.6.3，它默认校验长度；但 requests 允许用户装 urllib3 1.26，1.26 默认不校验，短读会被当成正常结束，残缺文件随后被原子替换上去，"失败不破坏旧文件"就失效了。UP 未加密时总会声明 `Content-Length`（压缩时为压缩后的大小），加密输出不声明，此时跳过核对。
 8. 目标已存在时用 `shutil.copymode` 把原有权限位带到临时文件，然后 `os.replace(tmp, target)` 原子替换。保留权限位不是可有可无：否则一个 0600 的私有文件被替换后会按 umask 变成 0644。不做 `fsync`：它解决的是断电后的持久性，不是这次要解决的"传输失败不破坏旧文件"，测不出效果，还会拖慢大文件下载。
@@ -239,7 +242,9 @@ Python 的 `int` 没有溢出问题，`Size` 不需要 Java 那样的 `Long` 兼
    - 非 200 时不创建文件，连接被释放；
    - 中途中断，用 fake adapter 构造两种情况：响应体比声明的 `Content-Length` 短（SDK 自己的长度核对会报错，不依赖 urllib3 版本），以及响应流读到一半抛异常。两种情况下旧文件内容都不变，目录里也不残留临时文件；
    - 带 `Content-Encoding` 或没有 `Content-Length` 的响应跳过长度核对；
-   - `SaveTo` 为符号链接时写入链接目标；已有文件的权限位保留。
+   - `SaveTo` 为符号链接时写入链接目标；已有文件的权限位保留；覆盖 0600 文件时，读取响应期间临时文件即为 0600；
+   - `SaveTo` 为目录或 FIFO 时不发请求；
+   - 3xx 不跟随（只发出一个请求），错误信息含状态码和 `Location`；空响应体的非 200 错误信息含状态码；只配 STS token 时报错；AK 带尾随换行时报错且不泄漏。
    - 变异验证：把实现改成直接写目标文件，中断用例必须失败。
 8. **真实环境 e2e**：`libs/api/tests/test_up_e2e.py`，标记 `e2e`，只有设置 `HIAGENT_UP_UPLOAD_ENDPOINT`、`HIAGENT_UP_DOWNLOAD_ENDPOINT` 和 AK/SK 时才运行；跑一遍上传、长期化、获取下载 Key、下载、删除，上传之后的断言都放在 `try` 里，`finally` 里删除已上传的文件。最好在关闭匿名访问的 UP 上执行一次。
 

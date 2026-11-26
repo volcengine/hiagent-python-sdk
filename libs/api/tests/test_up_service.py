@@ -165,8 +165,17 @@ def test_half_configured_credentials_fail_before_sending(ak, sk):
     assert adapter.sent == []
 
 
-def test_invalid_access_key_does_not_leak():
-    service, adapter = make_service(_ok({}), ak="AKLT\nleaked")
+def test_session_token_without_keys_fails_before_sending():
+    service, adapter = make_service(_ok({}), ak="", sk="")
+    service.set_session_token("sts-token")
+    with pytest.raises(ValueError):
+        service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
+    assert adapter.sent == []
+
+
+@pytest.mark.parametrize("ak", ["AKLTleaked\n", "AKLT\nleaked"])
+def test_invalid_access_key_does_not_leak(ak):
+    service, adapter = make_service(_ok({}), ak=ak)
     with pytest.raises(ValueError) as excinfo:
         service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
     assert "leaked" not in str(excinfo.value)
@@ -177,6 +186,26 @@ def test_non_200_raises_with_body():
     service, _ = make_service(lambda sent: response(400, b'{"error":"bad"}'))
     with pytest.raises(Exception, match="bad"):
         service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
+
+
+def test_non_200_without_body_raises_with_status():
+    service, _ = make_service(lambda sent: response(503))
+    with pytest.raises(Exception, match="503"):
+        service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
+
+
+@pytest.mark.parametrize("status", [301, 302, 307, 308])
+def test_redirect_is_not_followed(status):
+    location = "https://elsewhere.example.com/up"
+    service, adapter = make_service(
+        lambda sent: response(status, b"moved", {"Location": location})
+    )
+    service.set_session_token("sts-token")
+    with pytest.raises(Exception) as excinfo:
+        service.Delete(up_types.DeleteRequest(Id="file-0001", Sha256=LOWER_SHA))
+    assert len(adapter.sent) == 1
+    assert str(status) in str(excinfo.value)
+    assert location in str(excinfo.value)
 
 
 @pytest.mark.parametrize("action", ["UploadRaw", "LongLive", "DownloadKey", "Delete"])

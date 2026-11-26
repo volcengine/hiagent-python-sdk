@@ -36,6 +36,7 @@
   - 带 `Content-Encoding` 或没有 `Content-Length` 时跳过长度核对；
   - 符号链接、已有文件的权限位保留。
 - [x] 4.2 实现：`with` 包住流式响应，临时文件、长度核对、`copymode`、`os.replace`；做两项变异验证：改成直接写目标文件时中断用例必须失败，去掉长度核对时短响应用例必须失败。
+- [x] 4.3 自审补充（先写测试，再实现）：AK 尾随换行用 `fullmatch` 拦截；只配 STS token 时报错；不跟随重定向，3xx 和空响应体错误带状态码；`SaveTo` 为目录或非普通文件时发请求前报错；覆盖已有文件时临时文件以 0600 创建。变异验证：临时文件改回 0o666 时 0600 用例失败。
 
 ## 5. 调用方、示例与文档
 
@@ -47,7 +48,7 @@
 ## 6. 验证
 
 - [x] 6.1 `uv run pytest libs/api/tests -q`。
-- [ ] 6.2 `uv run pytest -q`（workspace 回归）被既有问题阻断：agent-harness 4 个测试文件收集时报 `ModuleNotFoundError: cli_anything`，暂存本次改动后同样复现。替代验证：`uv run pytest libs -q` 146 passed / 4 skipped，`PYTHONPATH=agent-harness uv run pytest agent-harness -q` 52 passed。原文：agent-harness 不在 workspace 内，单独执行 `PYTHONPATH=agent-harness uv run pytest agent-harness/cli_anything/hiagent_sdk/tests/test_up_endpoints.py -q`。
+- [ ] 6.2 `uv run pytest -q`（workspace 回归）被既有问题阻断：agent-harness 4 个测试文件收集时报 `ModuleNotFoundError: cli_anything`，暂存本次改动后同样复现。替代验证：`uv run pytest libs -q` 158 passed / 4 skipped，`PYTHONPATH=agent-harness uv run pytest agent-harness -q` 52 passed。原文：agent-harness 不在 workspace 内，单独执行 `PYTHONPATH=agent-harness uv run pytest agent-harness/cli_anything/hiagent_sdk/tests/test_up_endpoints.py -q`。
 - [x] 6.3 `uv run ruff check .`、`git diff --check`。（workspace 未装 ruff，改用 `uvx ruff` 0.17.6；本次新增和改动的文件无告警，其余既有告警未处理。）
 - [x] 6.4 `uv build --package hiagent-api`，检查 wheel 内容并记录 `tests/`（含 `tests/data/`）是否被打入（既有打包问题，本次只记录）。结果：构建成功，wheel 中包含 `tests/` 与 `tests/data/up_signature_vectors.json`。
 - [ ] 6.5 在关闭匿名访问的 UP 上跑一次 e2e，记录 UP 版本、各步状态码，不记录凭据。（未执行：需要真实环境，开启方式见 `libs/api/tests/test_up_e2e.py`。）

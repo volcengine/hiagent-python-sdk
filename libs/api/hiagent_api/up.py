@@ -17,6 +17,7 @@ import hashlib
 import json
 import os
 import shutil
+import stat
 import uuid
 from typing import Any, BinaryIO, Dict, Optional, Tuple
 from urllib.parse import urlparse
@@ -165,18 +166,15 @@ class UpService(Service):
         """
         if not params.SaveTo or not params.SaveTo.strip():
             raise ValueError("DownloadRequest.SaveTo must be set")
+        target = _download_target(params.SaveTo)
+        # SaveTo is excluded from model_dump, so the dump is exactly the query.
         query = {
-            "Key": params.Key,
-            "Path": params.Path,
+            **params.model_dump(by_alias=True, exclude_none=True),
             "Sha256": _normalize_sha256(params.Sha256),
-            "ID": params.ID,
-            "Filename": params.Filename,
-            "ImageCompress": params.ImageCompress,
         }
         with self._send("Download", query, b"", _JSON, _EMPTY_SHA256, stream=True) as resp:
-            if resp.status_code != 200:
-                raise Exception(resp.text)
-            _save_atomically(resp, params.SaveTo)
+            _check_status(resp)
+            _save_atomically(resp, target)
 
     def Delete(self, params: up_types.DeleteRequest) -> Dict[str, Any]:
         """删除文件的一条关联；关联全部删除后文件在下次回收时删除。
@@ -235,13 +233,20 @@ class UpService(Service):
                 self.service_info.socket_timeout,
             ),
             stream=stream,
+            # A redirect would resend the request with a signature for the old
+            # URL (as GET for 301/302) and carry X-Security-Token to another host.
+            allow_redirects=False,
         )
 
     def _credentials(self) -> Optional[Tuple[str, str, str]]:
         """None when neither AK nor SK is configured (send unsigned); raises
         ValueError for half-configured or malformed credentials."""
         credentials = self.service_info.credentials
-        if _is_blank(credentials.ak) and _is_blank(credentials.sk):
+        if (
+            _is_blank(credentials.ak)
+            and _is_blank(credentials.sk)
+            and _is_blank(credentials.session_token)
+        ):
             return None
         return _up_signer.check_credentials(
             credentials.ak, credentials.sk, credentials.session_token
@@ -259,9 +264,20 @@ def _encode_query(params: Dict[str, Any]) -> str:
     return "&".join(pairs)
 
 
+def _check_status(resp: requests.Response) -> None:
+    if resp.status_code == 200:
+        return
+    if resp.is_redirect:
+        raise Exception(
+            f"UP answered HTTP {resp.status_code} redirecting to "
+            f"{resp.headers['Location']}; redirects are not followed, "
+            "check the endpoint"
+        )
+    raise Exception(resp.text or f"UP answered HTTP {resp.status_code}")
+
+
 def _result(resp: requests.Response) -> Any:
-    if resp.status_code != 200:
-        raise Exception(resp.text)
+    _check_status(resp)
     data = resp.json()
     if not isinstance(data, dict) or "Result" not in data:
         raise Exception(f"no Result in response: {resp.text}")
@@ -303,23 +319,43 @@ def _sha256_from_here(file: BinaryIO) -> str:
     return digest.hexdigest()
 
 
-def _save_atomically(resp: requests.Response, save_to: str) -> None:
+def _download_target(save_to: str) -> str:
+    """Resolve SaveTo and reject what an atomic replace must not touch, before
+    anything is downloaded."""
     # realpath: a symlinked SaveTo gets its target replaced, as open(SaveTo) did.
     target = os.path.realpath(save_to)
+    try:
+        mode = os.stat(target).st_mode
+    except FileNotFoundError:
+        return target
+    if stat.S_ISDIR(mode):
+        raise IsADirectoryError(f"DownloadRequest.SaveTo is a directory: {save_to}")
+    if not stat.S_ISREG(mode):
+        # Replacing a device or FIFO (e.g. /dev/null as root) would swap the
+        # node itself for a regular file.
+        raise ValueError(f"DownloadRequest.SaveTo is not a regular file: {save_to}")
+    return target
+
+
+def _save_atomically(resp: requests.Response, target: str) -> None:
     directory = os.path.dirname(target)
     os.makedirs(directory, exist_ok=True)
     temp = os.path.join(directory, f".{os.path.basename(target)}.{uuid.uuid4().hex}.part")
-    # 0o666 & ~umask, like open(); mkstemp would force 0600.
-    fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0), 0o666)
+    exists = os.path.exists(target)
+    # Overwriting: stay private until the old mode is copied over, so a 0600
+    # file's content is never readable through the partial file. New file:
+    # 0o666 & ~umask, like open().
+    mode = 0o600 if exists else 0o666
+    # Outside the try: on a name collision there is nothing of ours to remove.
+    out = open(temp, "xb", opener=lambda path, flags: os.open(path, flags, mode))
     try:
         written = 0
-        with os.fdopen(fd, "wb") as out:
+        with out:
             for chunk in resp.iter_content(chunk_size=_CHUNK_SIZE):
                 out.write(chunk)
                 written += len(chunk)
         _check_length(resp, written)
-        if os.path.exists(target):
-            # Keep the existing file's mode: a 0600 file must not become 0644.
+        if exists:
             shutil.copymode(target, temp)
         os.replace(temp, target)
     except BaseException:

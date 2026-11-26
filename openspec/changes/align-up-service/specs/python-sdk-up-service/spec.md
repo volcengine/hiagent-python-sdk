@@ -36,6 +36,11 @@
 - **THEN** SDK 必须在发出请求前抛出 `ValueError`
 - **AND** 异常信息中不包含该凭证的值
 
+#### Scenario: AK 带尾随换行
+
+- **WHEN** `ak` 末尾带换行（AK 不做 strip）
+- **THEN** SDK 必须在发出请求前抛出 `ValueError`，而不是把它交给 `requests` 在 `InvalidHeader` 中带出 `Authorization` 的值
+
 #### Scenario: STS token 带尾随换行
 
 - **WHEN** `session_token` 末尾带换行
@@ -43,7 +48,7 @@
 
 ### Requirement: 未配置凭证时的行为
 
-AK、SK 都未配置时，SDK 必须（MUST）照常发出请求但不签名；只配置了其中一个时，必须在发请求前抛出 `ValueError`。
+AK、SK、STS token 都未配置时，SDK 必须（MUST）照常发出请求但不签名；配置了其中一部分但 AK、SK 不全时，必须在发请求前抛出 `ValueError`。
 
 #### Scenario: 都未配置
 
@@ -53,7 +58,7 @@ AK、SK 都未配置时，SDK 必须（MUST）照常发出请求但不签名；�
 
 #### Scenario: 只配置一半
 
-- **WHEN** 只配置了 AK 或只配置了 SK
+- **WHEN** 只配置了 AK 或只配置了 SK，或只配置了 STS token
 - **THEN** SDK 必须抛出 `ValueError`，且不发出请求
 
 ### Requirement: 统一使用 POST
@@ -173,7 +178,18 @@ SDK 发出的所有 sha256 都必须（MUST）去掉首尾空白并转小写，�
 
 ### Requirement: 响应处理
 
-非 200 响应必须（MUST）以 `Exception` 抛出并带上响应体；200 响应缺少 `Result` 时，五个方法都必须抛出说明缺少 `Result` 的 `Exception`。
+非 200 响应必须（MUST）以 `Exception` 抛出并带上响应体，响应体为空时带上状态码；200 响应缺少 `Result` 时，五个方法都必须抛出说明缺少 `Result` 的 `Exception`。SDK 不得跟随重定向。
+
+#### Scenario: 收到重定向
+
+- **WHEN** 任意方法收到带 `Location` 的 301/302/307/308 响应
+- **THEN** SDK 只发出这一个请求，不跟随重定向
+- **AND** 抛出的 `Exception` 包含状态码和 `Location`
+
+#### Scenario: 非 200 且响应体为空
+
+- **WHEN** 任意方法收到响应体为空的非 200 响应
+- **THEN** 抛出的 `Exception` 包含状态码
 
 #### Scenario: 缺少 Result
 
@@ -204,3 +220,13 @@ SDK 发出的所有 sha256 都必须（MUST）去掉首尾空白并转小写，�
 
 - **WHEN** `SaveTo` 指向一个符号链接
 - **THEN** 写入的必须是链接指向的文件，链接本身保留
+
+#### Scenario: SaveTo 不是普通文件
+
+- **WHEN** `SaveTo`（解析符号链接后）是目录，或是设备文件、FIFO 等非普通文件
+- **THEN** SDK 必须在发出请求前抛出异常（目录为 `IsADirectoryError`，其余为 `ValueError`），不改动该路径
+
+#### Scenario: 覆盖私有文件
+
+- **WHEN** `SaveTo` 处已有权限为 0600 的文件
+- **THEN** 下载过程中的临时文件权限必须是 0600，完成后目标权限仍为 0600

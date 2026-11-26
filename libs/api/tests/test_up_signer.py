@@ -136,6 +136,7 @@ def test_requires_secret_key(sk):
     "field, value",
     [
         ("ak", "AKLT\nleak"),
+        ("ak", "AKLTleak\n"),
         ("ak", "AKLT\rleak"),
         ("ak", "AKLT leak"),
         ("ak", "AKLT\x01leak"),

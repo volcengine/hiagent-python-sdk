@@ -38,7 +38,7 @@ _SIGNED_HEADERS = "x-content-sha256;x-date"
 _X_DATE_FORMAT = "%Y%m%dT%H%M%SZ"
 _SHORT_DATE_LENGTH = 8
 _UNRESERVED = "-_.~"
-_HEADER_SAFE = re.compile(r"^[\x21-\x7e]+$")
+_HEADER_SAFE = re.compile(r"[\x21-\x7e]+")
 
 
 def sign(
@@ -140,10 +140,10 @@ def check_credentials(
         raise ValueError("UP request signing requires both AccessKey and SecretKey")
     # Checked here because requests would quote the whole header value in its
     # InvalidHeader message.
-    if not _HEADER_SAFE.match(ak):
+    if not _HEADER_SAFE.fullmatch(ak):
         raise ValueError("AccessKey contains characters not allowed in an HTTP header")
     token = (session_token or "").strip()
-    if token and not _HEADER_SAFE.match(token):
+    if token and not _HEADER_SAFE.fullmatch(token):
         raise ValueError(
             "session token contains characters not allowed in an HTTP header"
         )
